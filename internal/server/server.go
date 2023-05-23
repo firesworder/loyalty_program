@@ -9,14 +9,16 @@ import (
 )
 
 type Server struct {
-	Address string
-	Storage storage.Storage
-	Router  chi.Router
+	Address     string
+	Storage     storage.Storage
+	Router      chi.Router
+	TokensCache *AuthTokensCache
 }
 
 func NewServer(addr string, storage storage.Storage) *Server {
 	s := &Server{Address: addr}
 	s.Storage = storage
+	s.TokensCache = NewAuthTokensCache(nil)
 	s.InitRouter()
 	return s
 }
