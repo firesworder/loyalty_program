@@ -20,6 +20,7 @@ type Response struct {
 	StatusCode  int
 	ContentType string
 	Content     string
+	Cookies     []*http.Cookie
 }
 
 func SendTestRequest(t *testing.T, ts *httptest.Server, args RequestArgs) Response {
@@ -39,5 +40,6 @@ func SendTestRequest(t *testing.T, ts *httptest.Server, args RequestArgs) Respon
 		StatusCode:  respRaw.StatusCode,
 		ContentType: respRaw.Header.Get("Content-Type"),
 		Content:     string(content),
+		Cookies:     respRaw.Cookies(),
 	}
 }
