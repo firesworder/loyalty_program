@@ -6,8 +6,8 @@ import (
 	"testing"
 )
 
-var userAdmin = storage.MockUser{Login: "admin", HashedPassword: "admin"}
-var userPostgres = storage.MockUser{Login: "postgres", HashedPassword: "postgres"}
+var userAdmin = &storage.MockUser{Login: "admin", HashedPassword: "admin"}
+var userPostgres = &storage.MockUser{Login: "postgres", HashedPassword: "postgres"}
 
 func TestAuthTokensCache_AddUser(t *testing.T) {
 	type args struct {

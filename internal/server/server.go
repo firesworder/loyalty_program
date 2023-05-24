@@ -32,14 +32,14 @@ func (s *Server) InitRouter() {
 	s.Router.Use(middleware.Recoverer)
 
 	s.Router.Route("/api/user/", func(r chi.Router) {
-		r.Post("register", s.handlerRegisterUser)
-		r.Post("login", s.handlerLoginUser)
+		r.Post("/register", s.handlerRegisterUser)
+		r.Post("/login", s.handlerLoginUser)
 
-		r.Post("orders", s.handlerRegisterOrderNumber)
-		r.Get("orders", s.handlerGetOrderStatusList)
-		r.Get("balance", s.handlerGetBalance)
-		r.Post("balance/withdraw", s.handlerWithdrawBonuses)
-		r.Get("withdrawals", s.handlerGetWithdrawals)
+		r.Post("/orders", s.handlerRegisterOrderNumber)
+		r.Get("/orders", s.handlerGetOrderStatusList)
+		r.Get("/balance", s.handlerGetBalance)
+		r.Post("/balance/withdraw", s.handlerWithdrawBonuses)
+		r.Get("/withdrawals", s.handlerGetWithdrawals)
 	})
 }
 

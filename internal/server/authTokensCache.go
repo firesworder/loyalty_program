@@ -10,7 +10,11 @@ type AuthTokensCache struct {
 }
 
 func NewAuthTokensCache(users map[string]storage.User) *AuthTokensCache {
-	return &AuthTokensCache{Users: users}
+	c := AuthTokensCache{Users: map[string]storage.User{}}
+	if users != nil {
+		c.Users = users
+	}
+	return &c
 }
 
 func (c *AuthTokensCache) AddUser(authToken string, user storage.User) error {
