@@ -123,13 +123,7 @@ func Test_setAuthTokenCookie(t *testing.T) {
 }
 
 func TestServer_handlerLoginUser(t *testing.T) {
-	mockStorage := &storage.Mock{
-		Users: map[string]storage.MockUser{
-			"admin":    {Login: "admin", HashedPassword: "admin", AuthToken: "adminToken"},
-			"postgres": {Login: "postgres", HashedPassword: "postgres", AuthToken: "postgresToken"},
-		},
-	}
-	serverObj := NewServer("", mockStorage)
+	serverObj := NewServer("", storage.NewMock())
 	ts := httptest.NewServer(serverObj.Router)
 	defer ts.Close()
 
@@ -258,14 +252,7 @@ func TestServer_handlerLoginUser(t *testing.T) {
 
 func TestServer_handlerRegisterUser(t *testing.T) {
 	testTokenValue := "someAuthToken"
-	mockStorage := storage.Mock{
-		Users: map[string]storage.MockUser{
-			"admin":    {Login: "admin", HashedPassword: "admin", AuthToken: "adminToken"},
-			"postgres": {Login: "postgres", HashedPassword: "postgres", AuthToken: "postgresToken"},
-		},
-	}
-	defaultMS := mockStorage
-	serverObj := NewServer("", &defaultMS)
+	serverObj := NewServer("", storage.NewMock())
 	ts := httptest.NewServer(serverObj.Router)
 	defer ts.Close()
 
@@ -276,7 +263,7 @@ func TestServer_handlerRegisterUser(t *testing.T) {
 		wantResponse    testingHelper.Response
 		wantCache       AuthTokensCache
 		wantCookie      *testCookie
-		wantUserStorage storage.Mock
+		wantUserStorage []storage.User
 	}{
 		{
 			name: "Test 1. Correct reg data.",
@@ -299,11 +286,11 @@ func TestServer_handlerRegisterUser(t *testing.T) {
 				},
 			},
 			wantCookie: &testCookie{name: "token", value: testTokenValue},
-			wantUserStorage: storage.Mock{Users: map[string]storage.MockUser{
-				"admin":    {Login: "admin", HashedPassword: "admin", AuthToken: "adminToken"},
-				"postgres": {Login: "postgres", HashedPassword: "postgres", AuthToken: "postgresToken"},
-				"mysql":    {Login: "mysql", HashedPassword: "mysql", AuthToken: testTokenValue},
-			}},
+			wantUserStorage: []storage.User{
+				userAdmin,
+				userPostgres,
+				&storage.MockUser{Login: "mysql", HashedPassword: "mysql", AuthToken: testTokenValue},
+			},
 		},
 		{
 			name: "Test 2. Incorrect reg data. Login already exist.",
@@ -321,7 +308,7 @@ func TestServer_handlerRegisterUser(t *testing.T) {
 			},
 			wantCookie:      nil,
 			wantCache:       AuthTokensCache{Users: map[string]storage.User{"adminToken": userAdmin}},
-			wantUserStorage: mockStorage,
+			wantUserStorage: []storage.User{userAdmin, userPostgres},
 		},
 		{
 			name: "Test 3. User with the same token already in cache.",
@@ -342,7 +329,7 @@ func TestServer_handlerRegisterUser(t *testing.T) {
 			},
 			wantCookie:      nil,
 			wantCache:       AuthTokensCache{Users: map[string]storage.User{"adminToken": userAdmin}},
-			wantUserStorage: mockStorage,
+			wantUserStorage: []storage.User{userAdmin, userPostgres},
 		},
 		{
 			name: "Test 4. Incorrect http method",
@@ -360,7 +347,7 @@ func TestServer_handlerRegisterUser(t *testing.T) {
 			},
 			wantCookie:      nil,
 			wantCache:       AuthTokensCache{Users: map[string]storage.User{"adminToken": userAdmin}},
-			wantUserStorage: mockStorage,
+			wantUserStorage: []storage.User{userAdmin, userPostgres},
 		},
 		{
 			name: "Test 5. Incorrect request body. Not set password field.",
@@ -378,7 +365,7 @@ func TestServer_handlerRegisterUser(t *testing.T) {
 			},
 			wantCookie:      nil,
 			wantCache:       AuthTokensCache{Users: map[string]storage.User{"adminToken": userAdmin}},
-			wantUserStorage: mockStorage,
+			wantUserStorage: []storage.User{userAdmin, userPostgres},
 		},
 		{
 			name: "Test 6. Incorrect request body. Not set login field.",
@@ -396,7 +383,7 @@ func TestServer_handlerRegisterUser(t *testing.T) {
 			},
 			wantCookie:      nil,
 			wantCache:       AuthTokensCache{Users: map[string]storage.User{"adminToken": userAdmin}},
-			wantUserStorage: mockStorage,
+			wantUserStorage: []storage.User{userAdmin, userPostgres},
 		},
 	}
 
