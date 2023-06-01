@@ -103,6 +103,7 @@ func (s *Server) handlerGetOrderStatusList(writer http.ResponseWriter, request *
 }
 
 // handlerGetBalance получение текущего баланса счёта баллов лояльности пользователя
+// todo: исправить, GetWithdrawn - и баланс из одной функции берутся
 func (s *Server) handlerGetBalance(writer http.ResponseWriter, request *http.Request) {
 	demoUser := storage.MockUser{Login: "admin", HashedPassword: "admin", AuthToken: "adminToken"}
 

@@ -140,10 +140,6 @@ func (m *MockUser) GetId() int64 {
 	return m.Id
 }
 
-func (m *Mock) Ping() error {
-	return nil
-}
-
 func (m *Mock) AddUser(login, password string) (User, error) {
 	for _, user := range m.Users {
 		if user.Login == login {
