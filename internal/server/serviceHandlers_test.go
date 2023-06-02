@@ -43,7 +43,8 @@ func Test_checkOrderNumberByLuhn(t *testing.T) {
 }
 
 func TestServer_handlerRegisterOrderNumber(t *testing.T) {
-	server := NewServer("", storage.NewMock())
+	sM := storage.NewMock()
+	server := NewServer("", sM)
 	ts := httptest.NewServer(server.Router)
 	defer ts.Close()
 
@@ -128,7 +129,7 @@ func TestServer_handlerRegisterOrderNumber(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			server.Storage.ResetData()
+			sM.ResetData()
 			gotResp := testingHelper.SendTestRequest(t, ts, tt.reqArgs)
 			gotResp.Cookies = nil
 			assert.Equal(t, tt.wantResponse, gotResp)
@@ -209,7 +210,8 @@ func TestServer_handlerGetBalance(t *testing.T) {
 }
 
 func TestServer_handlerWithdrawBonuses(t *testing.T) {
-	server := NewServer("", storage.NewMock())
+	sM := storage.NewMock()
+	server := NewServer("", sM)
 	ts := httptest.NewServer(server.Router)
 	defer ts.Close()
 
@@ -280,7 +282,7 @@ func TestServer_handlerWithdrawBonuses(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			server.Storage.ResetData()
+			sM.ResetData()
 			gotResp := testingHelper.SendTestRequest(t, ts, tt.reqArgs)
 			gotResp.Cookies = nil
 			assert.Equal(t, tt.wantResponse, gotResp)

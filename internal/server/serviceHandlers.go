@@ -56,7 +56,7 @@ func (s *Server) handlerRegisterOrderNumber(writer http.ResponseWriter, request 
 		http.Error(writer, "user not authorized", http.StatusUnauthorized)
 		return
 	}
-	demoUser := storage.MockUser{Login: "admin", HashedPassword: "admin", AuthToken: "adminToken"}
+	demoUser := storage.User{Login: "admin", Password: "admin"}
 
 	// взять номер заказа из запроса
 	defer request.Body.Close()
@@ -79,7 +79,7 @@ func (s *Server) handlerRegisterOrderNumber(writer http.ResponseWriter, request 
 	}
 
 	// проверить, что его нет в списке заказов(2 ошибки - уже и уже другим)
-	err = s.Storage.AddOrder(orderNumber, &demoUser)
+	err = s.Storage.AddOrder(orderNumber, demoUser)
 	if err != nil {
 		if errors.Is(err, storage.ErrOrderRegByThatUser) {
 			writer.WriteHeader(http.StatusOK)
@@ -100,9 +100,9 @@ func (s *Server) handlerGetOrderStatusList(writer http.ResponseWriter, request *
 		http.Error(writer, "user not authorized", http.StatusUnauthorized)
 		return
 	}
-	demoUser := storage.MockUser{Login: "admin", HashedPassword: "admin", AuthToken: "adminToken"}
+	demoUser := storage.User{Login: "admin", Password: "admin"}
 
-	statusList := s.Storage.GetOrderStatusList(&demoUser)
+	statusList := s.Storage.GetOrderStatusList(demoUser)
 	rJson, err := json.Marshal(statusList)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
@@ -121,18 +121,18 @@ func (s *Server) handlerGetBalance(writer http.ResponseWriter, request *http.Req
 		return
 	}
 
-	demoUser := storage.MockUser{Login: "admin", HashedPassword: "admin", AuthToken: "adminToken"}
+	demoUser := storage.User{Login: "admin", Password: "admin"}
 
-	balance, err := s.Storage.GetBalance(&demoUser)
+	balance, err := s.Storage.GetBalance(demoUser)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	r := struct {
-		Current   float64 `json:"current"`
-		Withdrawn int64   `json:"withdrawn"`
-	}{Current: balance, Withdrawn: s.Storage.GetWithdrawn(&demoUser)}
+		Current   int64 `json:"current"`
+		Withdrawn int64 `json:"withdrawn"`
+	}{Current: balance, Withdrawn: s.Storage.GetWithdrawn(demoUser)}
 
 	rJson, err := json.Marshal(r)
 	if err != nil {
@@ -150,7 +150,7 @@ func (s *Server) handlerWithdrawBonuses(writer http.ResponseWriter, request *htt
 		http.Error(writer, "user not authorized", http.StatusUnauthorized)
 		return
 	}
-	demoUser := storage.MockUser{Login: "admin", HashedPassword: "admin", AuthToken: "adminToken"}
+	demoUser := storage.User{Login: "admin", Password: "admin"}
 
 	// считать тело запроса
 	r := struct {
@@ -169,7 +169,7 @@ func (s *Server) handlerWithdrawBonuses(writer http.ResponseWriter, request *htt
 		return
 	}
 
-	err = s.Storage.AddWithdrawn(r.Order, r.Sum, &demoUser)
+	err = s.Storage.AddWithdrawn(r.Order, r.Sum, demoUser)
 	if errors.Is(err, storage.ErrBalanceExceeded) {
 		http.Error(writer, err.Error(), http.StatusPaymentRequired)
 		return
@@ -183,9 +183,9 @@ func (s *Server) handlerGetWithdrawals(writer http.ResponseWriter, request *http
 		http.Error(writer, "user not authorized", http.StatusUnauthorized)
 		return
 	}
-	demoUser := storage.MockUser{Login: "admin", HashedPassword: "admin", AuthToken: "adminToken"}
+	demoUser := storage.User{Login: "admin", Password: "admin"}
 
-	withdrawalsList := s.Storage.GetWithdrawnList(&demoUser)
+	withdrawalsList := s.Storage.GetWithdrawnList(demoUser)
 	if len(withdrawalsList) == 0 {
 		writer.WriteHeader(http.StatusNoContent)
 		return

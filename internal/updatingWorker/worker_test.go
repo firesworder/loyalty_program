@@ -98,7 +98,7 @@ func TestWorker_Start(t *testing.T) {
 	w.ApiCalcAddress = ts.URL + "/api/orders/"
 
 	// демо данные
-	s.OrderStatus = []storage.MockOrderStatus{
+	s.OrderStatus = []storage.OrderStatus{
 		storage.MockOrderStatusData[5],
 		storage.MockOrderStatusData[4],
 		storage.MockOrderStatusData[3],
@@ -107,7 +107,7 @@ func TestWorker_Start(t *testing.T) {
 	s.OrderStatus[3].Number = "636197079784"
 
 	// желаемый результат
-	wantOS := make([]storage.MockOrderStatus, len(s.OrderStatus))
+	wantOS := make([]storage.OrderStatus, len(s.OrderStatus))
 	copy(wantOS, s.OrderStatus)
 	// единственный заказ который должен измениться!
 	wantOS[1].Amount, wantOS[3].Amount = 500, 500

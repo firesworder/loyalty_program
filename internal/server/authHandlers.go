@@ -70,7 +70,7 @@ func (s *Server) handlerRegisterUser(writer http.ResponseWriter, request *http.R
 
 	token := createToken(userPost)
 
-	s.TokensCache.AddUser(token, user)
+	s.TokensCache.AddUser(token, *user)
 	setTokenCookie(writer, token)
 }
 
@@ -89,6 +89,6 @@ func (s *Server) handlerLoginUser(writer http.ResponseWriter, request *http.Requ
 
 	token := createToken(userPost)
 
-	s.TokensCache.AddUser(token, user)
+	s.TokensCache.AddUser(token, *user)
 	setTokenCookie(writer, token)
 }

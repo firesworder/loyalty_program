@@ -1,27 +1,19 @@
 package storage
 
 type Storage interface {
-	AddUser(login, password string) (User, error)
-	GetUser(login, password string) (User, error)
+	AddUser(login, password string) (*User, error)
+	GetUser(login, password string) (*User, error)
 
-	GetBalance(user User) (float64, error)
-	GetOrderStatusList(user User) []MockOrderStatus
+	GetBalance(user User) (int64, error)
+	UpdateBalance(newAmount int64, user User) error
+	GetOrderStatusList(user User) []OrderStatus
 	AddOrder(orderNumber string, user User) error
 
-	UpdateOrderStatuses(orderStatusList []MockOrderStatus) error
-	GetOrdersWithTemporaryStatus() ([]MockOrderStatus, error)
-	GetAllOrderStatusList() ([]MockOrderStatus, error)
+	UpdateOrderStatuses(orderStatusList []OrderStatus) error
+	GetOrdersWithTemporaryStatus() ([]OrderStatus, error)
+	GetAllOrderStatusList() ([]OrderStatus, error)
 
 	GetWithdrawn(user User) int64
 	AddWithdrawn(orderNumber string, amount int64, user User) error
-	GetWithdrawnList(user User) []MockWithdrawn
-
-	ResetData()
-}
-
-type User interface {
-	GetToken() string
-	GetLogin() string
-	GetPassword() string
-	GetId() int64
+	GetWithdrawnList(user User) []Withdrawn
 }

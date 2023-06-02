@@ -4,7 +4,7 @@ const createTablesSQL = `
 CREATE TABLE IF NOT EXISTS Users
 (
 	id      SERIAL PRIMARY KEY,
-	login VARCHAR(30) UNIQUE,
+	login 	VARCHAR(30) UNIQUE,
     password VARCHAR(16)
 );
 

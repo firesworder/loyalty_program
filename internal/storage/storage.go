@@ -48,7 +48,7 @@ func (db *SQLStorage) CreateTablesIfNotExists(ctx context.Context) (err error) {
 	return nil
 }
 
-func (db *SQLStorage) AddUser(login, password string) (User, error) {
+func (db *SQLStorage) AddUser(login, password string) (*User, error) {
 	ctx := context.Background()
 
 	var id int64
@@ -64,17 +64,17 @@ func (db *SQLStorage) AddUser(login, password string) (User, error) {
 		return nil, err
 	}
 
-	u := SQLUser{Id: id, Login: login, Password: password}
+	u := User{ID: id, Login: login, Password: password}
 	return &u, nil
 }
 
-func (db *SQLStorage) GetUser(login, password string) (User, error) {
+func (db *SQLStorage) GetUser(login, password string) (*User, error) {
 	ctx := context.Background()
 
-	u := SQLUser{}
+	u := User{}
 	err := db.Connection.QueryRowContext(ctx,
 		"SELECT id, login, password FROM users WHERE login = $1 AND password = $2",
-		login, password).Scan(&u.Id, &u.Login, &u.Password)
+		login, password).Scan(&u.ID, &u.Login, &u.Password)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, ErrAuthDataIncorrect
@@ -85,11 +85,11 @@ func (db *SQLStorage) GetUser(login, password string) (User, error) {
 }
 
 // todo: float переделать в int
-func (db *SQLStorage) GetBalance(user User) (float64, error) {
+func (db *SQLStorage) GetBalance(user User) (int64, error) {
 	ctx := context.Background()
-	var b float64
+	var b int64
 	err := db.Connection.QueryRowContext(ctx,
-		"SELECT balance FROM balance WHERE user_id = $1 LIMIT 1", user.GetId(),
+		"SELECT balance FROM balance WHERE user_id = $1 LIMIT 1", user.ID,
 	).Scan(&b)
 	if err != nil {
 		return 0, err
@@ -97,14 +97,14 @@ func (db *SQLStorage) GetBalance(user User) (float64, error) {
 	return b, nil
 }
 
-func (db *SQLStorage) GetOrderStatusList(user User) []MockOrderStatus {
-	result := make([]MockOrderStatus, 0)
+func (db *SQLStorage) GetOrderStatusList(user User) []OrderStatus {
+	result := make([]OrderStatus, 0)
 	rows, err := db.Connection.QueryContext(context.Background(),
-		`SELECT order_id, status, amount, uploaded_at, user_id FROM orders WHERE user_id = $1`, user.GetId())
+		`SELECT order_id, status, amount, uploaded_at, user_id FROM orders WHERE user_id = $1`, user.ID)
 
-	var oS MockOrderStatus
+	var oS OrderStatus
 	for rows.Next() {
-		oS = MockOrderStatus{}
+		oS = OrderStatus{}
 		err = rows.Scan(&oS.Number, &oS.Status, &oS.Amount, &oS.UploadedAt, &oS.UserId)
 		// todo: тут должна быть ошибка
 		if err != nil {
@@ -126,7 +126,7 @@ func (db *SQLStorage) AddOrder(orderNumber string, user User) error {
 		return err
 	}
 	if exOrderId != "" {
-		if exUserId == user.GetId() {
+		if exUserId == user.ID {
 			return ErrOrderRegByThatUser
 		} else {
 			return ErrOrderRegByOtherUser
@@ -136,7 +136,7 @@ func (db *SQLStorage) AddOrder(orderNumber string, user User) error {
 	// вставка
 	result, err := db.Connection.ExecContext(ctx,
 		"INSERT INTO orders(order_id, status, amount, uploaded_at, user_id) VALUES ($1, $2, $3, $4, $5)",
-		orderNumber, "NEW", 0, time.Now(), user.GetId())
+		orderNumber, "NEW", 0, time.Now(), user.ID)
 	if err != nil {
 		return err
 	}
@@ -157,7 +157,7 @@ func (db *SQLStorage) AddWithdrawn(orderNumber string, amount int64, user User) 
 	// проверка баланса на возможность списания
 	var curBalance, curWithdrawn int64
 	err := db.Connection.QueryRowContext(ctx,
-		"SELECT balance, withdrawn FROM balance WHERE user_id = $1", user.GetId()).Scan(&curBalance, &curWithdrawn)
+		"SELECT balance, withdrawn FROM balance WHERE user_id = $1", user.ID).Scan(&curBalance, &curWithdrawn)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return fmt.Errorf("no user balance data")
@@ -179,7 +179,7 @@ func (db *SQLStorage) AddWithdrawn(orderNumber string, amount int64, user User) 
 	// изменение баланса оставшихся бонусов и списанных
 	result, err := tx.ExecContext(ctx,
 		"UPDATE balance SET balance = $1, withdrawn = $2 WHERE user_id = $3",
-		curBalance-amount, curWithdrawn+amount, user.GetId())
+		curBalance-amount, curWithdrawn+amount, user.ID)
 	if err != nil {
 		return err
 	}
@@ -194,7 +194,7 @@ func (db *SQLStorage) AddWithdrawn(orderNumber string, amount int64, user User) 
 	// регистрация запроса на списание
 	result, err = db.Connection.ExecContext(ctx,
 		"INSERT INTO withdrawn(order_id, amount, uploaded_at, user_id) VALUES($1, $2, $3, $4)",
-		orderNumber, amount, time.Now(), user.GetId())
+		orderNumber, amount, time.Now(), user.ID)
 	if err != nil {
 		return err
 	}
@@ -208,16 +208,16 @@ func (db *SQLStorage) AddWithdrawn(orderNumber string, amount int64, user User) 
 	return tx.Commit()
 }
 
-func (db *SQLStorage) GetWithdrawnList(user User) []MockWithdrawn {
+func (db *SQLStorage) GetWithdrawnList(user User) []Withdrawn {
 	ctx := context.Background()
-	result := make([]MockWithdrawn, 0)
+	result := make([]Withdrawn, 0)
 	rows, err := db.Connection.QueryContext(ctx,
 		`SELECT order_id, amount, uploaded_at, user_id FROM withdrawn WHERE user_id = $1`,
-		user.GetId())
+		user.ID)
 
-	var w MockWithdrawn
+	var w Withdrawn
 	for rows.Next() {
-		w = MockWithdrawn{}
+		w = Withdrawn{}
 		// todo: orderId заменить на orderNumber
 		err = rows.Scan(&w.OrderId, &w.Amount, &w.ProcessedAt, &w.UserId)
 		// todo: тут должна быть ошибка
@@ -230,15 +230,20 @@ func (db *SQLStorage) GetWithdrawnList(user User) []MockWithdrawn {
 	return result
 }
 
-func (db *SQLStorage) ResetData() {
-	// todo: функция для тестирования(для мока, точнее)
-	return
-}
-
-func (db *SQLStorage) GetOrdersWithTemporaryStatus() ([]MockOrderStatus, error) {
+func (db *SQLStorage) GetOrdersWithTemporaryStatus() ([]OrderStatus, error) {
 	return nil, nil
 }
 
-func (db *SQLStorage) UpdateOrderStatuses(orderStatusList []MockOrderStatus) error {
+func (db *SQLStorage) UpdateOrderStatuses(orderStatusList []OrderStatus) error {
 	return nil
+}
+
+func (db *SQLStorage) GetAllOrderStatusList() ([]OrderStatus, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (db *SQLStorage) UpdateBalance(newAmount int64, user User) error {
+	//TODO implement me
+	panic("implement me")
 }

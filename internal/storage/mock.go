@@ -3,54 +3,18 @@ package storage
 import (
 	"crypto/md5"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"time"
 )
 
-type MockUser struct {
-	Id             int64
-	Login          string
-	HashedPassword string
-	AuthToken      string
-}
-
-type MockBalance struct {
-	UserId int64
-	Amount float64
-}
-
-type MockWithdrawn struct {
-	OrderId     string    `json:"order"`
-	Amount      int64     `json:"sum"`
-	ProcessedAt time.Time `json:"processed_at"`
-	UserId      int64     `json:"-"`
-}
-
-type MockOrderStatus struct {
-	Number     string    `json:"number"`
-	Status     string    `json:"status"`
-	Amount     int64     `json:"accrual,omitempty"`
-	UploadedAt time.Time `json:"uploaded_at"`
-	UserId     int64     `json:"-"`
-}
-
 type Mock struct {
-	Users       []MockUser
-	OrderStatus []MockOrderStatus
-	Withdrawn   []MockWithdrawn
-	Balance     []MockBalance
+	Users       []User
+	OrderStatus []OrderStatus
+	Withdrawn   []Withdrawn
+	Balance     []Balance
 }
 
-var (
-	ErrLoginExist          = errors.New("login already exist")
-	ErrAuthDataIncorrect   = errors.New("login or password incorrect")
-	ErrOrderRegByThatUser  = errors.New("order already registered by you")
-	ErrOrderRegByOtherUser = errors.New("order has been registered already by other user")
-	ErrBalanceExceeded     = errors.New("balance exceeded")
-)
-
-var MockOrderStatusData = []MockOrderStatus{
+var MockOrderStatusData = []OrderStatus{
 	{
 		Number:     "order1",
 		Status:     "PROCESSED",
@@ -90,7 +54,7 @@ var MockOrderStatusData = []MockOrderStatus{
 	},
 }
 
-var MockWithdrawnData = []MockWithdrawn{
+var MockWithdrawnData = []Withdrawn{
 	{
 		OrderId:     "order6",
 		Amount:      100,
@@ -105,14 +69,14 @@ var MockWithdrawnData = []MockWithdrawn{
 	},
 }
 
-var MockUserData = []MockUser{
-	{Id: 0, Login: "admin", HashedPassword: "admin", AuthToken: "adminToken"},
-	{Id: 1, Login: "postgres", HashedPassword: "postgres", AuthToken: "postgresToken"},
+var MockUserData = []User{
+	{ID: 0, Login: "admin", Password: "admin"},
+	{ID: 1, Login: "postgres", Password: "postgres"},
 }
 
-var MockUserBalanceData = []MockBalance{
-	{UserId: 0, Amount: 900},
-	{UserId: 1, Amount: 900},
+var MockUserBalanceData = []Balance{
+	{UserId: 0, BalanceAmount: 900},
+	{UserId: 1, BalanceAmount: 900},
 }
 
 func NewMock() *Mock {
@@ -124,23 +88,14 @@ func NewMock() *Mock {
 	return &m
 }
 
-func (m *MockUser) GetToken() string {
-	return m.AuthToken
+func (m *Mock) ResetData() {
+	m.Users = MockUserData
+	m.OrderStatus = MockOrderStatusData
+	m.Withdrawn = MockWithdrawnData
+	m.Balance = MockUserBalanceData
 }
 
-func (m *MockUser) GetLogin() string {
-	return m.Login
-}
-
-func (m *MockUser) GetPassword() string {
-	return m.HashedPassword
-}
-
-func (m *MockUser) GetId() int64 {
-	return m.Id
-}
-
-func (m *Mock) AddUser(login, password string) (User, error) {
+func (m *Mock) AddUser(login, password string) (*User, error) {
 	for _, user := range m.Users {
 		if user.Login == login {
 			return nil, ErrLoginExist
@@ -149,15 +104,16 @@ func (m *Mock) AddUser(login, password string) (User, error) {
 
 	hash := md5.Sum([]byte(password))
 	hashedPassword := hex.EncodeToString(hash[:])
-	u := MockUser{Login: login, HashedPassword: hashedPassword, AuthToken: "someAuthToken"}
+	newID := int64(len(m.Users))
+	u := User{ID: newID, Login: login, Password: hashedPassword}
 	m.Users = append(m.Users, u)
 	return &u, nil
 }
 
-func (m *Mock) GetUser(login, password string) (User, error) {
+func (m *Mock) GetUser(login, password string) (*User, error) {
 	for _, user := range m.Users {
 		if user.Login == login {
-			if user.HashedPassword == password {
+			if user.Password == password {
 				return &user, nil
 			} else {
 				return nil, ErrAuthDataIncorrect
@@ -167,19 +123,19 @@ func (m *Mock) GetUser(login, password string) (User, error) {
 	return nil, ErrAuthDataIncorrect
 }
 
-func (m *Mock) GetBalance(user User) (float64, error) {
+func (m *Mock) GetBalance(user User) (int64, error) {
 	for _, b := range m.Balance {
-		if b.UserId == user.GetId() {
-			return b.Amount, nil
+		if b.UserId == user.ID {
+			return b.BalanceAmount, nil
 		}
 	}
 	return 0, fmt.Errorf("user balance not defined")
 }
 
-func (m *Mock) UpdateBalance(newAmount float64, user User) error {
+func (m *Mock) UpdateBalance(newAmount int64, user User) error {
 	for _, b := range m.Balance {
-		if b.UserId == user.GetId() {
-			b.Amount = newAmount
+		if b.UserId == user.ID {
+			b.BalanceAmount = newAmount
 			return nil
 		}
 	}
@@ -190,20 +146,20 @@ func (m *Mock) GetWithdrawn(user User) int64 {
 	return 15
 }
 
-func (m *Mock) GetWithdrawnList(user User) []MockWithdrawn {
-	result := make([]MockWithdrawn, 0)
+func (m *Mock) GetWithdrawnList(user User) []Withdrawn {
+	result := make([]Withdrawn, 0)
 	for _, mW := range m.Withdrawn {
-		if mW.UserId == user.GetId() {
+		if mW.UserId == user.ID {
 			result = append(result, mW)
 		}
 	}
 	return result
 }
 
-func (m *Mock) GetOrderStatusList(user User) []MockOrderStatus {
-	result := make([]MockOrderStatus, 0)
+func (m *Mock) GetOrderStatusList(user User) []OrderStatus {
+	result := make([]OrderStatus, 0)
 	for _, mOS := range m.OrderStatus {
-		if mOS.UserId == user.GetId() {
+		if mOS.UserId == user.ID {
 			result = append(result, mOS)
 		}
 	}
@@ -213,7 +169,7 @@ func (m *Mock) GetOrderStatusList(user User) []MockOrderStatus {
 func (m *Mock) AddOrder(orderNumber string, user User) error {
 	for _, order := range m.OrderStatus {
 		if order.Number == orderNumber {
-			if order.UserId == user.GetId() {
+			if order.UserId == user.ID {
 				return ErrOrderRegByThatUser
 			} else {
 				return ErrOrderRegByOtherUser
@@ -221,11 +177,11 @@ func (m *Mock) AddOrder(orderNumber string, user User) error {
 		}
 	}
 
-	order := MockOrderStatus{
+	order := OrderStatus{
 		Number:     orderNumber,
 		Status:     "NEW",
 		UploadedAt: time.Now(),
-		UserId:     user.GetId(),
+		UserId:     user.ID,
 	}
 	m.OrderStatus = append(m.OrderStatus, order)
 	return nil
@@ -237,18 +193,18 @@ func (m *Mock) AddWithdrawn(orderNumber string, amount int64, user User) error {
 		return err
 	}
 
-	if curBalance < float64(amount) {
+	if curBalance < amount {
 		return ErrBalanceExceeded
 	}
 
-	w := MockWithdrawn{
+	w := Withdrawn{
 		OrderId:     orderNumber,
 		Amount:      amount,
 		ProcessedAt: time.Now(),
-		UserId:      user.GetId(),
+		UserId:      user.ID,
 	}
 	m.Withdrawn = append(m.Withdrawn, w)
-	newBalance := curBalance - float64(amount)
+	newBalance := curBalance - amount
 	err = m.UpdateBalance(newBalance, user)
 	if err != nil {
 		return err
@@ -257,15 +213,8 @@ func (m *Mock) AddWithdrawn(orderNumber string, amount int64, user User) error {
 	return nil
 }
 
-func (m *Mock) ResetData() {
-	m.Users = MockUserData
-	m.OrderStatus = MockOrderStatusData
-	m.Withdrawn = MockWithdrawnData
-	m.Balance = MockUserBalanceData
-}
-
-func (m *Mock) GetOrdersWithTemporaryStatus() ([]MockOrderStatus, error) {
-	result := make([]MockOrderStatus, 0)
+func (m *Mock) GetOrdersWithTemporaryStatus() ([]OrderStatus, error) {
+	result := make([]OrderStatus, 0)
 	for _, oS := range m.OrderStatus {
 		if oS.Status == "NEW" || oS.Status == "PROCESSING" {
 			result = append(result, oS)
@@ -274,7 +223,7 @@ func (m *Mock) GetOrdersWithTemporaryStatus() ([]MockOrderStatus, error) {
 	return result, nil
 }
 
-func (m *Mock) UpdateOrderStatuses(orderStatusList []MockOrderStatus) error {
+func (m *Mock) UpdateOrderStatuses(orderStatusList []OrderStatus) error {
 	for _, uOS := range orderStatusList {
 		for cOSIndex := range m.OrderStatus {
 			if uOS.Number == m.OrderStatus[cOSIndex].Number {
@@ -286,6 +235,6 @@ func (m *Mock) UpdateOrderStatuses(orderStatusList []MockOrderStatus) error {
 	return nil
 }
 
-func (m *Mock) GetAllOrderStatusList() ([]MockOrderStatus, error) {
+func (m *Mock) GetAllOrderStatusList() ([]OrderStatus, error) {
 	return m.OrderStatus, nil
 }

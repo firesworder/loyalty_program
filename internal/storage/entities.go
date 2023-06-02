@@ -1,30 +1,19 @@
 package storage
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
-type SQLUser struct {
-	Id       int64
-	Login    string
-	Password string
-}
+var (
+	ErrLoginExist          = errors.New("login already exist")
+	ErrAuthDataIncorrect   = errors.New("login or password incorrect")
+	ErrOrderRegByThatUser  = errors.New("order already registered by you")
+	ErrOrderRegByOtherUser = errors.New("order has been registered already by other user")
+	ErrBalanceExceeded     = errors.New("balance exceeded")
+)
 
-func (u *SQLUser) GetToken() string {
-	return ""
-}
-
-func (u *SQLUser) GetLogin() string {
-	return u.Login
-}
-
-func (u *SQLUser) GetPassword() string {
-	return u.Password
-}
-
-func (u *SQLUser) GetId() int64 {
-	return u.Id
-}
-
-type SQLOrderStatus struct {
+type OrderStatus struct {
 	Number     string    `json:"number"`
 	Status     string    `json:"status"`
 	Amount     int64     `json:"accrual,omitempty"`
@@ -32,9 +21,21 @@ type SQLOrderStatus struct {
 	UserId     int64     `json:"-"`
 }
 
-type SQLWithdrawn struct {
+type Withdrawn struct {
 	OrderId     string    `json:"order"`
 	Amount      int64     `json:"sum"`
 	ProcessedAt time.Time `json:"processed_at"`
 	UserId      int64     `json:"-"`
+}
+
+type Balance struct {
+	UserId          int64
+	BalanceAmount   int64
+	WithdrawnAmount int64
+}
+
+type User struct {
+	ID       int64
+	Login    string
+	Password string
 }

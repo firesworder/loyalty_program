@@ -228,8 +228,8 @@ func TestServer_handlerLoginUser(t *testing.T) {
 }
 
 func TestServer_handlerRegisterUser(t *testing.T) {
-	userAdmin := &storage.MockUser{Login: "admin", HashedPassword: "admin"}
-	userPostgres := &storage.MockUser{Login: "postgres", HashedPassword: "postgres"}
+	userAdmin := storage.User{Login: "admin", Password: "admin"}
+	userPostgres := storage.User{Login: "postgres", Password: "postgres"}
 
 	serverObj := NewServer("", storage.NewMock())
 	ts := httptest.NewServer(serverObj.Router)
@@ -259,7 +259,7 @@ func TestServer_handlerRegisterUser(t *testing.T) {
 			wantUserStorage: []storage.User{
 				userAdmin,
 				userPostgres,
-				&storage.MockUser{Login: "mysql", HashedPassword: "mysql"},
+				{Login: "mysql", Password: "mysql"},
 			},
 		},
 		{

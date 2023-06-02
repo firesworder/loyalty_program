@@ -11,7 +11,7 @@ import (
 
 const devDSN = "postgresql://postgres:admin@localhost:5432/loyalty_program"
 
-var demoOrderStatuses = []MockOrderStatus{
+var demoOrderStatuses = []OrderStatus{
 	{
 		Number:     "9359943520",
 		Status:     "NEW",
@@ -142,8 +142,8 @@ func TestSQLStorage_GetBalance(t *testing.T) {
 	}{
 		{
 			name: "Test 1. Correct getBalancer",
-			user: &SQLUser{
-				Id:       userId,
+			user: User{
+				ID:       userId,
 				Login:    "demoU",
 				Password: "demoU",
 			},
@@ -152,8 +152,8 @@ func TestSQLStorage_GetBalance(t *testing.T) {
 		},
 		{
 			name: "Test 2. User not found",
-			user: &SQLUser{
-				Id:       15,
+			user: User{
+				ID:       15,
 				Login:    "someUser",
 				Password: "someUser",
 			},
@@ -207,26 +207,26 @@ func TestSQLStorage_GetOrderStatusList(t *testing.T) {
 	tests := []struct {
 		name   string
 		user   User
-		wantOS []MockOrderStatus
+		wantOS []OrderStatus
 		//wantErr     error
 	}{
 		{
 			name: "Test 1. User has registered orders",
-			user: &SQLUser{
-				Id:       userId1,
+			user: User{
+				ID:       userId1,
 				Login:    "demoU",
 				Password: "demoU",
 			},
-			wantOS: []MockOrderStatus{demo[0], demo[2]},
+			wantOS: []OrderStatus{demo[0], demo[2]},
 		},
 		{
 			name: "Test 2. User has not registered orders",
-			user: &SQLUser{
-				Id:       15,
+			user: User{
+				ID:       15,
 				Login:    "someUser",
 				Password: "someUser",
 			},
-			wantOS: []MockOrderStatus{},
+			wantOS: []OrderStatus{},
 		},
 	}
 
@@ -284,8 +284,8 @@ func TestSQLStorage_AddOrder(t *testing.T) {
 			name: "Test 1. Correct add order",
 			args: args{
 				orderNumber: "624605372751",
-				user: &SQLUser{
-					Id:       userId1,
+				user: User{
+					ID:       userId1,
 					Login:    "demoU",
 					Password: "demoU",
 				},
@@ -296,8 +296,8 @@ func TestSQLStorage_AddOrder(t *testing.T) {
 			name: "Test 2. Incorrect request, order registered by the same user",
 			args: args{
 				orderNumber: "9359943520",
-				user: &SQLUser{
-					Id:       userId1,
+				user: User{
+					ID:       userId1,
 					Login:    "demoU",
 					Password: "demoU",
 				},
@@ -308,8 +308,8 @@ func TestSQLStorage_AddOrder(t *testing.T) {
 			name: "Test 3. Incorrect request, order registered by other user",
 			args: args{
 				orderNumber: "328257446760",
-				user: &SQLUser{
-					Id:       userId1,
+				user: User{
+					ID:       userId1,
 					Login:    "demoU",
 					Password: "demoU",
 				},
@@ -347,7 +347,7 @@ func TestSQLStorage_GetWithdrawnList(t *testing.T) {
 	require.NoError(t, err)
 	defer tx.Rollback()
 
-	demoWithdrawn := []MockWithdrawn{
+	demoWithdrawn := []Withdrawn{
 		{
 			OrderId:     "624605372751",
 			Amount:      300,
@@ -380,27 +380,27 @@ func TestSQLStorage_GetWithdrawnList(t *testing.T) {
 	tests := []struct {
 		name      string
 		user      User
-		wantWList []MockWithdrawn
+		wantWList []Withdrawn
 		// todo: добавить ошибку
 		//wantErr error
 	}{
 		{
 			name: "Test 1. Correct request",
-			user: &SQLUser{
-				Id:       userId1,
+			user: User{
+				ID:       userId1,
 				Login:    "demoU",
 				Password: "demoU",
 			},
-			wantWList: []MockWithdrawn{demoWithdrawn[0], demoWithdrawn[2]},
+			wantWList: []Withdrawn{demoWithdrawn[0], demoWithdrawn[2]},
 		},
 		{
 			name: "Test 2. User has no withdrawn",
-			user: &SQLUser{
-				Id:       15,
+			user: User{
+				ID:       15,
 				Login:    "someUser",
 				Password: "someUser",
 			},
-			wantWList: []MockWithdrawn{},
+			wantWList: []Withdrawn{},
 		},
 	}
 	for _, tt := range tests {
@@ -446,8 +446,8 @@ func TestSQLStorage_AddWithdrawn(t *testing.T) {
 			args: args{
 				orderNumber: "328257446760",
 				amount:      200,
-				user: &SQLUser{
-					Id:       userId,
+				user: User{
+					ID:       userId,
 					Login:    "demoU",
 					Password: "demoU",
 				},
@@ -460,8 +460,8 @@ func TestSQLStorage_AddWithdrawn(t *testing.T) {
 			args: args{
 				orderNumber: "9359943520",
 				amount:      1500,
-				user: &SQLUser{
-					Id:       userId,
+				user: User{
+					ID:       userId,
 					Login:    "demoU",
 					Password: "demoU",
 				},

@@ -50,7 +50,7 @@ func (w *Worker) updateTick() {
 	}
 
 	// опрашиваем сервис по каждому из заказов
-	updatedOrderStatuses := make([]storage.MockOrderStatus, 0)
+	updatedOrderStatuses := make([]storage.OrderStatus, 0)
 	for _, order := range oSList {
 		rB, err := w.sendOrderStatusRequest(order.Number)
 		if err != nil {
@@ -60,7 +60,7 @@ func (w *Worker) updateTick() {
 			}
 			continue
 		}
-		updatedOrderStatuses = append(updatedOrderStatuses, storage.MockOrderStatus{
+		updatedOrderStatuses = append(updatedOrderStatuses, storage.OrderStatus{
 			Number: rB.Order,
 			Status: rB.Status,
 			Amount: rB.Amount,
