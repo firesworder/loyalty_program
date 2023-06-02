@@ -132,7 +132,7 @@ func (s *Server) handlerGetBalance(writer http.ResponseWriter, request *http.Req
 	r := struct {
 		Current   int64 `json:"current"`
 		Withdrawn int64 `json:"withdrawn"`
-	}{Current: balance, Withdrawn: s.Storage.GetWithdrawn(demoUser)}
+	}{Current: balance.BalanceAmount, Withdrawn: balance.WithdrawnAmount}
 
 	rJson, err := json.Marshal(r)
 	if err != nil {

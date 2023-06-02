@@ -75,8 +75,8 @@ var MockUserData = []User{
 }
 
 var MockUserBalanceData = []Balance{
-	{UserId: 0, BalanceAmount: 900},
-	{UserId: 1, BalanceAmount: 900},
+	{UserId: 0, BalanceAmount: 900, WithdrawnAmount: 15},
+	{UserId: 1, BalanceAmount: 900, WithdrawnAmount: 100},
 }
 
 func NewMock() *Mock {
@@ -123,27 +123,23 @@ func (m *Mock) GetUser(login, password string) (*User, error) {
 	return nil, ErrAuthDataIncorrect
 }
 
-func (m *Mock) GetBalance(user User) (int64, error) {
+func (m *Mock) GetBalance(user User) (*Balance, error) {
 	for _, b := range m.Balance {
 		if b.UserId == user.ID {
-			return b.BalanceAmount, nil
+			return &b, nil
 		}
 	}
-	return 0, fmt.Errorf("user balance not defined")
+	return nil, fmt.Errorf("user balance not defined")
 }
 
-func (m *Mock) UpdateBalance(newAmount int64, user User) error {
-	for _, b := range m.Balance {
-		if b.UserId == user.ID {
-			b.BalanceAmount = newAmount
+func (m *Mock) UpdateBalance(newBalance Balance) error {
+	for i := range m.Balance {
+		if m.Balance[i].UserId == newBalance.UserId {
+			m.Balance[i] = newBalance
 			return nil
 		}
 	}
 	return fmt.Errorf("user balance not defined")
-}
-
-func (m *Mock) GetWithdrawn(user User) int64 {
-	return 15
 }
 
 func (m *Mock) GetWithdrawnList(user User) []Withdrawn {
@@ -193,7 +189,7 @@ func (m *Mock) AddWithdrawn(orderNumber string, amount int64, user User) error {
 		return err
 	}
 
-	if curBalance < amount {
+	if curBalance.BalanceAmount < amount {
 		return ErrBalanceExceeded
 	}
 
@@ -204,8 +200,12 @@ func (m *Mock) AddWithdrawn(orderNumber string, amount int64, user User) error {
 		UserId:      user.ID,
 	}
 	m.Withdrawn = append(m.Withdrawn, w)
-	newBalance := curBalance - amount
-	err = m.UpdateBalance(newBalance, user)
+	newBalance := Balance{
+		UserId:          user.ID,
+		BalanceAmount:   curBalance.BalanceAmount - amount,
+		WithdrawnAmount: curBalance.WithdrawnAmount + amount,
+	}
+	err = m.UpdateBalance(newBalance)
 	if err != nil {
 		return err
 	}

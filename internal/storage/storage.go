@@ -84,17 +84,16 @@ func (db *SQLStorage) GetUser(login, password string) (*User, error) {
 	return &u, nil
 }
 
-// todo: float переделать в int
-func (db *SQLStorage) GetBalance(user User) (int64, error) {
+func (db *SQLStorage) GetBalance(user User) (*Balance, error) {
 	ctx := context.Background()
-	var b int64
+	var b, w, uid int64
 	err := db.Connection.QueryRowContext(ctx,
-		"SELECT balance FROM balance WHERE user_id = $1 LIMIT 1", user.ID,
-	).Scan(&b)
+		"SELECT balance, withdrawn, user_id FROM balance WHERE user_id = $1 LIMIT 1", user.ID,
+	).Scan(&b, &w, &uid)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	return b, nil
+	return &Balance{UserId: uid, BalanceAmount: b, WithdrawnAmount: w}, nil
 }
 
 func (db *SQLStorage) GetOrderStatusList(user User) []OrderStatus {
@@ -145,11 +144,6 @@ func (db *SQLStorage) AddOrder(orderNumber string, user User) error {
 		return err
 	}
 	return nil
-}
-
-func (db *SQLStorage) GetWithdrawn(user User) int64 {
-	// todo: удалить метод
-	return 0
 }
 
 func (db *SQLStorage) AddWithdrawn(orderNumber string, amount int64, user User) error {
@@ -231,19 +225,59 @@ func (db *SQLStorage) GetWithdrawnList(user User) []Withdrawn {
 }
 
 func (db *SQLStorage) GetOrdersWithTemporaryStatus() ([]OrderStatus, error) {
-	return nil, nil
+	ctx := context.Background()
+	result := make([]OrderStatus, 0)
+	rows, err := db.Connection.QueryContext(ctx,
+		"SELECT order_id, status, amount, uploaded_at, user_id FROM orders WHERE status IN (`$1`,`$2`)",
+		"NEW", "PROCESSING")
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		oS := OrderStatus{}
+		err := rows.Scan(&oS)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, oS)
+	}
+	return result, nil
 }
 
 func (db *SQLStorage) UpdateOrderStatuses(orderStatusList []OrderStatus) error {
+	ctx := context.Background()
+	tx, err := db.Connection.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for _, oS := range orderStatusList {
+		_, err = tx.ExecContext(ctx,
+			"INSERT INTO orders(order_id, status, amount) VALUES ($1, $2, $3)",
+			oS.Number, oS.Status, oS.Amount)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
+func (db *SQLStorage) UpdateBalance(newBalance Balance) error {
+	ctx := context.Background()
+	result, err := db.Connection.ExecContext(ctx,
+		"UPDATE balance SET balance = $1, withdrawn = $2 WHERE user_id = $3",
+		newBalance.BalanceAmount, newBalance.WithdrawnAmount, newBalance.UserId)
+	if err != nil {
+		return err
+	}
+	rAff, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rAff == 0 {
+		return fmt.Errorf("balance has not been changed, unknown error")
+	}
 	return nil
-}
-
-func (db *SQLStorage) GetAllOrderStatusList() ([]OrderStatus, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (db *SQLStorage) UpdateBalance(newAmount int64, user User) error {
-	//TODO implement me
-	panic("implement me")
 }

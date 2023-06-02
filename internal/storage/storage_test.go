@@ -137,17 +137,17 @@ func TestSQLStorage_GetBalance(t *testing.T) {
 	tests := []struct {
 		name        string
 		user        User
-		wantBalance float64
+		wantBalance *Balance
 		wantErr     error
 	}{
 		{
-			name: "Test 1. Correct getBalancer",
+			name: "Test 1. Correct getBalance.",
 			user: User{
 				ID:       userId,
 				Login:    "demoU",
 				Password: "demoU",
 			},
-			wantBalance: 250,
+			wantBalance: &Balance{UserId: userId, BalanceAmount: 250, WithdrawnAmount: 130},
 			wantErr:     nil,
 		},
 		{
@@ -157,7 +157,7 @@ func TestSQLStorage_GetBalance(t *testing.T) {
 				Login:    "someUser",
 				Password: "someUser",
 			},
-			wantBalance: 0,
+			wantBalance: nil,
 			wantErr:     sql.ErrNoRows,
 		},
 	}
@@ -437,8 +437,7 @@ func TestSQLStorage_AddWithdrawn(t *testing.T) {
 	tests := []struct {
 		name string
 		args
-		// todo: нужно проверять и withdrawn в балансе
-		wantBalance int64
+		wantBalance *Balance
 		wantErr     error
 	}{
 		{
@@ -452,7 +451,7 @@ func TestSQLStorage_AddWithdrawn(t *testing.T) {
 					Password: "demoU",
 				},
 			},
-			wantBalance: 800,
+			wantBalance: &Balance{BalanceAmount: 800, WithdrawnAmount: 1000, UserId: userId},
 			wantErr:     nil,
 		},
 		{
@@ -466,7 +465,8 @@ func TestSQLStorage_AddWithdrawn(t *testing.T) {
 					Password: "demoU",
 				},
 			},
-			wantBalance: 800,
+			// влияет тест сверху! если запускать отдельно - цифры будут отличаться(1000 и 800)
+			wantBalance: &Balance{BalanceAmount: 800, WithdrawnAmount: 1000, UserId: userId},
 			wantErr:     ErrBalanceExceeded,
 		},
 	}
@@ -477,7 +477,7 @@ func TestSQLStorage_AddWithdrawn(t *testing.T) {
 
 			balance, err := db.GetBalance(tt.user)
 			require.NoError(t, err)
-			assert.Equal(t, tt.wantBalance, int64(balance))
+			assert.Equal(t, tt.wantBalance, balance)
 		})
 	}
 }
