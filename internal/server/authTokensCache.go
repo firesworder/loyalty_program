@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"github.com/firesworder/loyalty_program/internal/storage"
 )
 
@@ -17,12 +16,8 @@ func NewAuthTokensCache(users map[string]storage.User) *AuthTokensCache {
 	return &c
 }
 
-func (c *AuthTokensCache) AddUser(authToken string, user storage.User) error {
-	if _, ok := c.Users[authToken]; ok {
-		return fmt.Errorf("token `%s` already in cache", authToken)
-	}
+func (c *AuthTokensCache) AddUser(authToken string, user storage.User) {
 	c.Users[authToken] = user
-	return nil
 }
 
 func (c *AuthTokensCache) IsTokenExist(authToken string) bool {

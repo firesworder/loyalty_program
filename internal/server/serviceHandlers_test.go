@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func Test_checkOrderNumberByLuhn(t *testing.T) {
@@ -58,6 +59,7 @@ func TestServer_handlerRegisterOrderNumber(t *testing.T) {
 				Url:         "/api/user/orders",
 				ContentType: ContentTypeJson,
 				Content:     "4561261212345467",
+				Cookie:      &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
 			},
 			wantResponse: testingHelper.Response{
 				StatusCode: http.StatusAccepted,
@@ -70,6 +72,7 @@ func TestServer_handlerRegisterOrderNumber(t *testing.T) {
 				Url:         "/api/user/orders",
 				ContentType: ContentTypeJson,
 				Content:     "9359943520",
+				Cookie:      &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
 			},
 			wantResponse: testingHelper.Response{
 				StatusCode: http.StatusOK,
@@ -80,6 +83,7 @@ func TestServer_handlerRegisterOrderNumber(t *testing.T) {
 			reqArgs: testingHelper.RequestArgs{
 				Method: http.MethodPost,
 				Url:    "/api/user/orders",
+				Cookie: &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
 			},
 			wantResponse: testingHelper.Response{
 				StatusCode:  http.StatusBadRequest,
@@ -95,6 +99,7 @@ func TestServer_handlerRegisterOrderNumber(t *testing.T) {
 				Url:         "/api/user/orders",
 				ContentType: ContentTypeJson,
 				Content:     "328257446760",
+				Cookie:      &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
 			},
 			wantResponse: testingHelper.Response{
 				StatusCode:  http.StatusConflict,
@@ -110,6 +115,7 @@ func TestServer_handlerRegisterOrderNumber(t *testing.T) {
 				Url:         "/api/user/orders",
 				ContentType: ContentTypeJson,
 				Content:     "328257446767",
+				Cookie:      &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
 			},
 			wantResponse: testingHelper.Response{
 				StatusCode:  http.StatusUnprocessableEntity,
@@ -145,6 +151,7 @@ func TestServer_handlerGetOrderStatusList(t *testing.T) {
 			reqArgs: testingHelper.RequestArgs{
 				Method: http.MethodGet,
 				Url:    "/api/user/orders",
+				Cookie: &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
 			},
 			wantResponse: testingHelper.Response{
 				StatusCode:  http.StatusOK,
@@ -181,6 +188,7 @@ func TestServer_handlerGetBalance(t *testing.T) {
 			reqArgs: testingHelper.RequestArgs{
 				Method: http.MethodGet,
 				Url:    "/api/user/balance",
+				Cookie: &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
 			},
 			wantResponse: testingHelper.Response{
 				StatusCode:  http.StatusOK,
@@ -217,6 +225,7 @@ func TestServer_handlerWithdrawBonuses(t *testing.T) {
 				Url:         "/api/user/balance/withdraw",
 				ContentType: ContentTypeJson,
 				Content:     `{"order": "456951314651", "sum": 100}`,
+				Cookie:      &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
 			},
 			wantResponse: testingHelper.Response{
 				StatusCode: http.StatusOK,
@@ -229,6 +238,7 @@ func TestServer_handlerWithdrawBonuses(t *testing.T) {
 				Url:         "/api/user/balance/withdraw",
 				ContentType: ContentTypeJson,
 				Content:     `{"order": "456951314651", "sum": 1000}`,
+				Cookie:      &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
 			},
 			wantResponse: testingHelper.Response{
 				StatusCode:  http.StatusPaymentRequired,
@@ -241,6 +251,7 @@ func TestServer_handlerWithdrawBonuses(t *testing.T) {
 			reqArgs: testingHelper.RequestArgs{
 				Method: http.MethodPost,
 				Url:    "/api/user/balance/withdraw",
+				Cookie: &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
 			},
 			wantResponse: testingHelper.Response{
 				StatusCode:  http.StatusBadRequest,
@@ -256,6 +267,7 @@ func TestServer_handlerWithdrawBonuses(t *testing.T) {
 				Url:         "/api/user/balance/withdraw",
 				ContentType: ContentTypeJson,
 				Content:     `{"order": "456951314655", "sum": 100}`,
+				Cookie:      &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
 			},
 			wantResponse: testingHelper.Response{
 				StatusCode:  http.StatusUnprocessableEntity,
@@ -291,6 +303,7 @@ func TestServer_handlerGetWithdrawals(t *testing.T) {
 			reqArgs: testingHelper.RequestArgs{
 				Method: http.MethodGet,
 				Url:    "/api/user/withdrawals",
+				Cookie: &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
 			},
 			wantResponse: testingHelper.Response{
 				StatusCode:  http.StatusOK,

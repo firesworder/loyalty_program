@@ -111,7 +111,7 @@ func Test_checkReqAuthData(t *testing.T) {
 func Test_setAuthTokenCookie(t *testing.T) {
 	cookieName, cookieValue := "token", "some_token"
 	ts := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		setAuthTokenCookie(writer, cookieValue)
+		setTokenCookie(writer, cookieValue)
 	}))
 	defer ts.Close()
 
@@ -128,12 +128,10 @@ func TestServer_handlerLoginUser(t *testing.T) {
 	defer ts.Close()
 
 	tests := []struct {
-		name           string
-		reqArgs        testingHelper.RequestArgs
-		initCacheState AuthTokensCache
-		wantResponse   testingHelper.Response
-		wantCache      AuthTokensCache
-		wantCookie     *testCookie
+		name         string
+		reqArgs      testingHelper.RequestArgs
+		wantResponse testingHelper.Response
+		wantCookie   bool
 	}{
 		{
 			name: "Test 1. Correct auth data.",
@@ -143,13 +141,12 @@ func TestServer_handlerLoginUser(t *testing.T) {
 				ContentType: "application/json",
 				Content:     `{"login": "admin", "password": "admin"}`,
 			},
-			initCacheState: AuthTokensCache{Users: map[string]storage.User{}},
 			wantResponse: testingHelper.Response{
 				StatusCode:  http.StatusOK,
 				ContentType: "",
 				Content:     "",
 			},
-			wantCookie: &testCookie{name: "token", value: "adminToken"},
+			wantCookie: true,
 		},
 		{
 			name: "Test 2. Incorrect auth data. Incorrect password.",
@@ -159,13 +156,12 @@ func TestServer_handlerLoginUser(t *testing.T) {
 				ContentType: "application/json",
 				Content:     `{"login": "admin", "password": "postgres"}`,
 			},
-			initCacheState: AuthTokensCache{Users: map[string]storage.User{}},
 			wantResponse: testingHelper.Response{
 				StatusCode:  http.StatusUnauthorized,
 				ContentType: "text/plain; charset=utf-8",
 				Content:     "login or password incorrect\n",
 			},
-			wantCookie: nil,
+			wantCookie: false,
 		},
 		{
 			name: "Test 3. Incorrect auth data. User don't exist.",
@@ -175,13 +171,12 @@ func TestServer_handlerLoginUser(t *testing.T) {
 				ContentType: "application/json",
 				Content:     `{"login": "randomLogin", "password": "postgres"}`,
 			},
-			initCacheState: AuthTokensCache{Users: map[string]storage.User{}},
 			wantResponse: testingHelper.Response{
 				StatusCode:  http.StatusUnauthorized,
 				ContentType: "text/plain; charset=utf-8",
 				Content:     "login or password incorrect\n",
 			},
-			wantCookie: nil,
+			wantCookie: false,
 		},
 		{
 			name: "Test 4. Incorrect http method",
@@ -191,13 +186,12 @@ func TestServer_handlerLoginUser(t *testing.T) {
 				ContentType: "application/json",
 				Content:     `{"login": "randomLogin", "password": "postgres"}`,
 			},
-			initCacheState: AuthTokensCache{Users: map[string]storage.User{}},
 			wantResponse: testingHelper.Response{
 				StatusCode:  http.StatusMethodNotAllowed,
 				ContentType: "",
 				Content:     "",
 			},
-			wantCookie: nil,
+			wantCookie: false,
 		},
 		{
 			name: "Test 5. Incorrect request body. Not set password field.",
@@ -207,42 +201,25 @@ func TestServer_handlerLoginUser(t *testing.T) {
 				ContentType: "application/json",
 				Content:     `{"login": "admin"}`,
 			},
-			initCacheState: AuthTokensCache{Users: map[string]storage.User{}},
 			wantResponse: testingHelper.Response{
 				StatusCode:  http.StatusBadRequest,
 				ContentType: "text/plain; charset=utf-8",
 				Content:     "login and passwords fields can not be empty\n",
 			},
-			wantCookie: nil,
-		},
-		{
-			name: "Test 6. User token already saved in cache.",
-			reqArgs: testingHelper.RequestArgs{
-				Method:      http.MethodPost,
-				Url:         "/api/user/login",
-				ContentType: "application/json",
-				Content:     `{"login": "admin", "password": "admin"}`,
-			},
-			initCacheState: AuthTokensCache{Users: map[string]storage.User{
-				"adminToken": userAdmin,
-			}},
-			wantResponse: testingHelper.Response{
-				StatusCode:  http.StatusInternalServerError,
-				ContentType: "text/plain; charset=utf-8",
-				Content:     "token `adminToken` already in cache\n",
-			},
-			wantCookie: nil,
+			wantCookie: false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			serverObj.TokensCache = &tt.initCacheState
-
 			gotResp := testingHelper.SendTestRequest(t, ts, tt.reqArgs)
 			// проверяем куку
 			gotCookie := getCookie(gotResp.Cookies, TokenCookieName)
-			assert.Equal(t, tt.wantCookie, gotCookie)
+			assert.Equal(t, tt.wantCookie, gotCookie != nil)
+			if tt.wantCookie {
+				// проверяем наличие пользователя в кеше
+				_, userInCache := serverObj.TokensCache.Users[gotCookie.value]
+				assert.Equal(t, true, userInCache)
+			}
 			// проверяем ответ
 			gotResp.Cookies = nil
 			assert.Equal(t, tt.wantResponse, gotResp)
@@ -251,7 +228,9 @@ func TestServer_handlerLoginUser(t *testing.T) {
 }
 
 func TestServer_handlerRegisterUser(t *testing.T) {
-	testTokenValue := "someAuthToken"
+	userAdmin := &storage.MockUser{Login: "admin", HashedPassword: "admin"}
+	userPostgres := &storage.MockUser{Login: "postgres", HashedPassword: "postgres"}
+
 	serverObj := NewServer("", storage.NewMock())
 	ts := httptest.NewServer(serverObj.Router)
 	defer ts.Close()
@@ -259,10 +238,8 @@ func TestServer_handlerRegisterUser(t *testing.T) {
 	tests := []struct {
 		name            string
 		reqArgs         testingHelper.RequestArgs
-		initCacheState  AuthTokensCache
 		wantResponse    testingHelper.Response
-		wantCache       AuthTokensCache
-		wantCookie      *testCookie
+		wantCookie      bool
 		wantUserStorage []storage.User
 	}{
 		{
@@ -273,23 +250,16 @@ func TestServer_handlerRegisterUser(t *testing.T) {
 				ContentType: "application/json",
 				Content:     `{"login": "mysql", "password": "mysql"}`,
 			},
-			initCacheState: AuthTokensCache{Users: map[string]storage.User{"adminToken": userAdmin}},
 			wantResponse: testingHelper.Response{
 				StatusCode:  http.StatusOK,
 				ContentType: "",
 				Content:     "",
 			},
-			wantCache: AuthTokensCache{
-				Users: map[string]storage.User{
-					"adminToken":   userAdmin,
-					testTokenValue: &storage.MockUser{Login: "mysql", HashedPassword: "mysql", AuthToken: testTokenValue},
-				},
-			},
-			wantCookie: &testCookie{name: "token", value: testTokenValue},
+			wantCookie: true,
 			wantUserStorage: []storage.User{
 				userAdmin,
 				userPostgres,
-				&storage.MockUser{Login: "mysql", HashedPassword: "mysql", AuthToken: testTokenValue},
+				&storage.MockUser{Login: "mysql", HashedPassword: "mysql"},
 			},
 		},
 		{
@@ -300,101 +270,75 @@ func TestServer_handlerRegisterUser(t *testing.T) {
 				ContentType: "application/json",
 				Content:     `{"login": "postgres", "password": "postgres"}`,
 			},
-			initCacheState: AuthTokensCache{Users: map[string]storage.User{"adminToken": userAdmin}},
 			wantResponse: testingHelper.Response{
 				StatusCode:  http.StatusConflict,
 				ContentType: "text/plain; charset=utf-8",
 				Content:     "login already exist\n",
 			},
-			wantCookie:      nil,
-			wantCache:       AuthTokensCache{Users: map[string]storage.User{"adminToken": userAdmin}},
+			wantCookie:      false,
 			wantUserStorage: []storage.User{userAdmin, userPostgres},
 		},
 		{
-			name: "Test 3. User with the same token already in cache.",
-			reqArgs: testingHelper.RequestArgs{
-				Method:      http.MethodPost,
-				Url:         "/api/user/register",
-				ContentType: "application/json",
-				Content:     `{"login": "someLogin", "password": "somePassword"}`,
-			},
-			initCacheState: AuthTokensCache{Users: map[string]storage.User{
-				"adminToken":   userAdmin,
-				testTokenValue: userPostgres,
-			}},
-			wantResponse: testingHelper.Response{
-				StatusCode:  http.StatusInternalServerError,
-				ContentType: "text/plain; charset=utf-8",
-				Content:     "token `someAuthToken` already in cache\n",
-			},
-			wantCookie:      nil,
-			wantCache:       AuthTokensCache{Users: map[string]storage.User{"adminToken": userAdmin}},
-			wantUserStorage: []storage.User{userAdmin, userPostgres},
-		},
-		{
-			name: "Test 4. Incorrect http method",
+			name: "Test 3. Incorrect http method",
 			reqArgs: testingHelper.RequestArgs{
 				Method:      http.MethodPut,
 				Url:         "/api/user/register",
 				ContentType: "application/json",
 				Content:     `{"login": "randomLogin", "password": "postgres"}`,
 			},
-			initCacheState: AuthTokensCache{Users: map[string]storage.User{"adminToken": userAdmin}},
 			wantResponse: testingHelper.Response{
 				StatusCode:  http.StatusMethodNotAllowed,
 				ContentType: "",
 				Content:     "",
 			},
-			wantCookie:      nil,
-			wantCache:       AuthTokensCache{Users: map[string]storage.User{"adminToken": userAdmin}},
+			wantCookie:      false,
 			wantUserStorage: []storage.User{userAdmin, userPostgres},
 		},
 		{
-			name: "Test 5. Incorrect request body. Not set password field.",
+			name: "Test 4. Incorrect request body. Not set password field.",
 			reqArgs: testingHelper.RequestArgs{
 				Method:      http.MethodPost,
 				Url:         "/api/user/register",
 				ContentType: "application/json",
 				Content:     `{"login": "admin"}`,
 			},
-			initCacheState: AuthTokensCache{Users: map[string]storage.User{}},
 			wantResponse: testingHelper.Response{
 				StatusCode:  http.StatusBadRequest,
 				ContentType: "text/plain; charset=utf-8",
 				Content:     "login and passwords fields can not be empty\n",
 			},
-			wantCookie:      nil,
-			wantCache:       AuthTokensCache{Users: map[string]storage.User{"adminToken": userAdmin}},
+			wantCookie:      false,
 			wantUserStorage: []storage.User{userAdmin, userPostgres},
 		},
 		{
-			name: "Test 6. Incorrect request body. Not set login field.",
+			name: "Test 5. Incorrect request body. Not set login field.",
 			reqArgs: testingHelper.RequestArgs{
 				Method:      http.MethodPost,
 				Url:         "/api/user/register",
 				ContentType: "application/json",
 				Content:     `{"password": "admin"}`,
 			},
-			initCacheState: AuthTokensCache{Users: map[string]storage.User{}},
 			wantResponse: testingHelper.Response{
 				StatusCode:  http.StatusBadRequest,
 				ContentType: "text/plain; charset=utf-8",
 				Content:     "login and passwords fields can not be empty\n",
 			},
-			wantCookie:      nil,
-			wantCache:       AuthTokensCache{Users: map[string]storage.User{"adminToken": userAdmin}},
+			wantCookie:      false,
 			wantUserStorage: []storage.User{userAdmin, userPostgres},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			serverObj.TokensCache = &tt.initCacheState
-
 			gotResp := testingHelper.SendTestRequest(t, ts, tt.reqArgs)
 			// проверяем куку
 			gotCookie := getCookie(gotResp.Cookies, TokenCookieName)
-			assert.Equal(t, tt.wantCookie, gotCookie)
+			assert.Equal(t, tt.wantCookie, gotCookie != nil)
+			if tt.wantCookie {
+				// проверяем наличие пользователя в кеше
+				_, userInCache := serverObj.TokensCache.Users[gotCookie.value]
+				assert.Equal(t, true, userInCache)
+			}
 			// проверяем ответ
 			gotResp.Cookies = nil
 			assert.Equal(t, tt.wantResponse, gotResp)

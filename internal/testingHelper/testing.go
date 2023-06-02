@@ -14,6 +14,7 @@ type RequestArgs struct {
 	Url         string
 	ContentType string
 	Content     string
+	Cookie      *http.Cookie
 }
 
 type Response struct {
@@ -28,6 +29,12 @@ func SendTestRequest(t *testing.T, ts *httptest.Server, args RequestArgs) Respon
 	request, err := http.NewRequest(args.Method, ts.URL+args.Url, strings.NewReader(args.Content))
 	request.Header.Set("Content-Type", args.ContentType)
 	require.NoError(t, err)
+
+	// если есть кука (авторизации) - добавить ее
+	if args.Cookie != nil {
+		request.AddCookie(args.Cookie)
+	}
+
 	// отправляю
 	respRaw, err := http.DefaultClient.Do(request)
 	require.NoError(t, err)
