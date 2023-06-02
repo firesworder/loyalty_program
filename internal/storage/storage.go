@@ -234,3 +234,11 @@ func (db *SQLStorage) ResetData() {
 	// todo: функция для тестирования(для мока, точнее)
 	return
 }
+
+func (db *SQLStorage) GetOrdersWithTemporaryStatus() ([]MockOrderStatus, error) {
+	return nil, nil
+}
+
+func (db *SQLStorage) UpdateOrderStatuses(orderStatusList []MockOrderStatus) error {
+	return nil
+}

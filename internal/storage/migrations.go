@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS Orders
     status varchar(15),
 	amount INTEGER,
 	uploaded_at timestamp with time zone,
+	processed_at timestamp with time zone,
 	user_id INTEGER REFERENCES Users(id)
 );
 

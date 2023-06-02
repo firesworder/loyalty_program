@@ -8,6 +8,10 @@ type Storage interface {
 	GetOrderStatusList(user User) []MockOrderStatus
 	AddOrder(orderNumber string, user User) error
 
+	UpdateOrderStatuses(orderStatusList []MockOrderStatus) error
+	GetOrdersWithTemporaryStatus() ([]MockOrderStatus, error)
+	GetAllOrderStatusList() ([]MockOrderStatus, error)
+
 	GetWithdrawn(user User) int64
 	AddWithdrawn(orderNumber string, amount int64, user User) error
 	GetWithdrawnList(user User) []MockWithdrawn

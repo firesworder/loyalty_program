@@ -263,3 +263,29 @@ func (m *Mock) ResetData() {
 	m.Withdrawn = MockWithdrawnData
 	m.Balance = MockUserBalanceData
 }
+
+func (m *Mock) GetOrdersWithTemporaryStatus() ([]MockOrderStatus, error) {
+	result := make([]MockOrderStatus, 0)
+	for _, oS := range m.OrderStatus {
+		if oS.Status == "NEW" || oS.Status == "PROCESSING" {
+			result = append(result, oS)
+		}
+	}
+	return result, nil
+}
+
+func (m *Mock) UpdateOrderStatuses(orderStatusList []MockOrderStatus) error {
+	for _, uOS := range orderStatusList {
+		for cOSIndex := range m.OrderStatus {
+			if uOS.Number == m.OrderStatus[cOSIndex].Number {
+				m.OrderStatus[cOSIndex].Status = uOS.Status
+				m.OrderStatus[cOSIndex].Amount = uOS.Amount
+			}
+		}
+	}
+	return nil
+}
+
+func (m *Mock) GetAllOrderStatusList() ([]MockOrderStatus, error) {
+	return m.OrderStatus, nil
+}

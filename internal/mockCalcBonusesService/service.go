@@ -7,6 +7,8 @@ import (
 	"strconv"
 )
 
+// todo: удалить
+
 type Mock struct {
 	Router   chi.Router
 	mockData map[int]Bonus
