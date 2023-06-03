@@ -1,6 +1,7 @@
 package updatingWorker
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"github.com/firesworder/loyalty_program/internal/storage"
@@ -42,7 +43,7 @@ func (w *Worker) Start() {
 }
 
 func (w *Worker) updateTick() {
-	oSList, err := w.Storage.GetOrdersWithTemporaryStatus()
+	oSList, err := w.Storage.GetOrdersWithTemporaryStatus(context.Background())
 	// если произошла ошибка на этапе получения заказов - ждать следующей итерации
 	if err != nil {
 		log.Println(err)
@@ -68,7 +69,7 @@ func (w *Worker) updateTick() {
 	}
 
 	// пакетное обновление статусов
-	err = w.Storage.UpdateOrderStatuses(updatedOrderStatuses)
+	err = w.Storage.UpdateOrderStatuses(context.Background(), updatedOrderStatuses)
 	if err != nil {
 		log.Println(err)
 		return
