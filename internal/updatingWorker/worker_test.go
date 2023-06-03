@@ -44,12 +44,9 @@ func getMockHandler(t *testing.T) http.HandlerFunc {
 
 func TestWorker_sendOrderStatusRequest(t *testing.T) {
 	s := storage.NewMock()
-	w := NewWorker(s, time.Minute)
-
 	ts := httptest.NewServer(getMockHandler(t))
 	defer ts.Close()
-
-	w.ApiCalcAddress = ts.URL + "/api/orders/"
+	w := NewWorker(s, time.Minute, ts.URL)
 
 	tests := []struct {
 		name        string
@@ -94,8 +91,7 @@ func TestWorker_Start(t *testing.T) {
 	defer ts.Close()
 
 	s := storage.NewMock()
-	w := NewWorker(s, 1*time.Second)
-	w.ApiCalcAddress = ts.URL + "/api/orders/"
+	w := NewWorker(s, 1*time.Second, ts.URL)
 
 	// демо данные
 	s.OrderStatus = []storage.OrderStatus{

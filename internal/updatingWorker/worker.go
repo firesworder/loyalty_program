@@ -13,8 +13,6 @@ import (
 var ErrReqLimitExceeded = errors.New("too many request, cancel current queue")
 var ErrOrderNotFound = errors.New("order number was not found")
 
-const calcApi = "/api/orders/"
-
 type Worker struct {
 	Storage           storage.Storage
 	ReqPerMinuteLimit int64
@@ -23,8 +21,8 @@ type Worker struct {
 	done              chan struct{}
 }
 
-func NewWorker(storage storage.Storage, tickerDuration time.Duration) *Worker {
-	w := &Worker{Storage: storage, ApiCalcAddress: calcApi, TickerDuration: tickerDuration}
+func NewWorker(storage storage.Storage, tickerDuration time.Duration, apiCalcAddr string) *Worker {
+	w := &Worker{Storage: storage, ApiCalcAddress: apiCalcAddr, TickerDuration: tickerDuration}
 	w.done = make(chan struct{})
 	return w
 }
@@ -83,7 +81,8 @@ type responseBody struct {
 }
 
 func (w *Worker) sendOrderStatusRequest(orderNumber string) (rB responseBody, err error) {
-	request, err := http.NewRequest(http.MethodGet, w.ApiCalcAddress+orderNumber, nil)
+	url := "/api/orders/" + orderNumber
+	request, err := http.NewRequest(http.MethodGet, w.ApiCalcAddress+url, nil)
 	if err != nil {
 		return
 	}
