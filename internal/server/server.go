@@ -10,6 +10,8 @@ import (
 	"net/url"
 )
 
+type tokenKey string
+
 type Server struct {
 	Address     string
 	Storage     storage.Storage
@@ -61,7 +63,8 @@ func (s *Server) InitAuthToken(next http.Handler) http.Handler {
 				return
 			}
 			ctx := request.Context()
-			ctx = context.WithValue(ctx, "token", token)
+			key := tokenKey("token")
+			ctx = context.WithValue(ctx, key, token)
 			request = request.WithContext(ctx)
 		} else if err != http.ErrNoCookie {
 			http.Error(writer, err.Error(), http.StatusInternalServerError)
