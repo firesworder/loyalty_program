@@ -294,7 +294,7 @@ func (db *SQLStorage) UpdateOrderStatuses(ctx context.Context, orderStatusList [
 	for userID, bUpdates := range userBalanceUpdates {
 		_, err = tx.ExecContext(ctx,
 			"UPDATE balance SET balance = balance + $1 WHERE user_id = $2",
-			userID, bUpdates)
+			bUpdates, userID)
 		if err != nil {
 			return err
 		}

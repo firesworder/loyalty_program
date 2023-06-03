@@ -63,6 +63,7 @@ func (w *Worker) updateTick() {
 			Number: rB.Order,
 			Status: rB.Status,
 			Amount: rB.Amount,
+			UserID: order.UserID,
 		})
 	}
 

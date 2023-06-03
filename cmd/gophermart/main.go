@@ -19,7 +19,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	worker := updatingworker.NewWorker(sqlStorage, 1*time.Minute, environment.AccrualSystemAddress)
+	worker := updatingworker.NewWorker(sqlStorage, 5*time.Second, environment.AccrualSystemAddress)
 	go worker.Start()
 	s := server.NewServer(environment.ServerAddress, sqlStorage)
 	s.Start()
