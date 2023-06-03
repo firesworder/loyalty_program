@@ -94,12 +94,17 @@ func (db *SQLStorage) GetOrderStatusList(ctx context.Context, user User) []Order
 	result := make([]OrderStatus, 0)
 	rows, err := db.Connection.QueryContext(ctx,
 		`SELECT order_id, status, amount, uploaded_at, user_id FROM orders WHERE user_id = $1`, user.ID)
+	if err != nil {
+		log.Println(err)
+		return nil
+	}
 
 	var oS OrderStatus
 	for rows.Next() {
 		oS = OrderStatus{}
 		err = rows.Scan(&oS.Number, &oS.Status, &oS.Amount, &oS.UploadedAt, &oS.UserID)
 		if err != nil {
+			log.Println(err)
 			return nil
 		}
 
@@ -202,6 +207,10 @@ func (db *SQLStorage) GetWithdrawnList(ctx context.Context, user User) []Withdra
 	rows, err := db.Connection.QueryContext(ctx,
 		`SELECT order_id, amount, uploaded_at, user_id FROM withdrawn WHERE user_id = $1`,
 		user.ID)
+	if err != nil {
+		log.Println(err)
+		return nil
+	}
 
 	var w Withdrawn
 	for rows.Next() {
