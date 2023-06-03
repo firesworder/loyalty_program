@@ -63,7 +63,7 @@ func (s *Server) InitAuthToken(next http.Handler) http.Handler {
 			ctx := request.Context()
 			ctx = context.WithValue(ctx, "token", token)
 			request = request.WithContext(ctx)
-		} else if err != nil && err != http.ErrNoCookie {
+		} else if err != http.ErrNoCookie {
 			http.Error(writer, err.Error(), http.StatusInternalServerError)
 			return
 		}
