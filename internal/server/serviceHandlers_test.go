@@ -45,6 +45,7 @@ func Test_checkOrderNumberByLuhn(t *testing.T) {
 func TestServer_handlerRegisterOrderNumber(t *testing.T) {
 	sM := storage.NewMock()
 	server := NewServer("", sM)
+	server.TokensCache.Users["token"] = storage.User{Login: "admin", Password: "admin"}
 	ts := httptest.NewServer(server.Router)
 	defer ts.Close()
 
@@ -139,6 +140,7 @@ func TestServer_handlerRegisterOrderNumber(t *testing.T) {
 
 func TestServer_handlerGetOrderStatusList(t *testing.T) {
 	server := NewServer("", storage.NewMock())
+	server.TokensCache.Users["token"] = storage.User{Login: "admin", Password: "admin"}
 	ts := httptest.NewServer(server.Router)
 	defer ts.Close()
 
@@ -176,6 +178,7 @@ func TestServer_handlerGetOrderStatusList(t *testing.T) {
 
 func TestServer_handlerGetBalance(t *testing.T) {
 	server := NewServer("", storage.NewMock())
+	server.TokensCache.Users["token"] = storage.User{Login: "admin", Password: "admin"}
 	ts := httptest.NewServer(server.Router)
 	defer ts.Close()
 
@@ -212,6 +215,7 @@ func TestServer_handlerGetBalance(t *testing.T) {
 func TestServer_handlerWithdrawBonuses(t *testing.T) {
 	sM := storage.NewMock()
 	server := NewServer("", sM)
+	server.TokensCache.Users["token"] = storage.User{Login: "admin", Password: "admin"}
 	ts := httptest.NewServer(server.Router)
 	defer ts.Close()
 
@@ -292,6 +296,7 @@ func TestServer_handlerWithdrawBonuses(t *testing.T) {
 
 func TestServer_handlerGetWithdrawals(t *testing.T) {
 	server := NewServer("", storage.NewMock())
+	server.TokensCache.Users["token"] = storage.User{Login: "admin", Password: "admin"}
 	ts := httptest.NewServer(server.Router)
 	defer ts.Close()
 

@@ -49,14 +49,25 @@ func checkOrderNumberByLuhn(orderNumber string) (err error) {
 	return nil
 }
 
-// handlerRegisterOrderNumber загрузка пользователем номера заказа для расчёта
-func (s *Server) handlerRegisterOrderNumber(writer http.ResponseWriter, request *http.Request) {
+func (s *Server) getUserAuthData(writer http.ResponseWriter, request *http.Request) *storage.User {
 	token := request.Context().Value("token")
 	if token == nil {
 		http.Error(writer, "user not authorized", http.StatusUnauthorized)
+		return nil
+	} else if tokenStr, ok := token.(string); !ok || !s.TokensCache.IsTokenExist(tokenStr) {
+		http.Error(writer, "user not authorized", http.StatusUnauthorized)
+		return nil
+	}
+	user := s.TokensCache.Users[token.(string)]
+	return &user
+}
+
+// handlerRegisterOrderNumber загрузка пользователем номера заказа для расчёта
+func (s *Server) handlerRegisterOrderNumber(writer http.ResponseWriter, request *http.Request) {
+	user := s.getUserAuthData(writer, request)
+	if user == nil {
 		return
 	}
-	demoUser := storage.User{Login: "admin", Password: "admin"}
 
 	// взять номер заказа из запроса
 	defer request.Body.Close()
@@ -78,8 +89,7 @@ func (s *Server) handlerRegisterOrderNumber(writer http.ResponseWriter, request 
 		return
 	}
 
-	// проверить, что его нет в списке заказов(2 ошибки - уже и уже другим)
-	err = s.Storage.AddOrder(request.Context(), orderNumber, demoUser)
+	err = s.Storage.AddOrder(request.Context(), orderNumber, *user)
 	if err != nil {
 		if errors.Is(err, storage.ErrOrderRegByThatUser) {
 			writer.WriteHeader(http.StatusOK)
@@ -95,14 +105,12 @@ func (s *Server) handlerRegisterOrderNumber(writer http.ResponseWriter, request 
 // handlerGetOrderStatusList получение списка загруженных пользователем номеров заказов,
 // статусов их обработки и информации о начислениях
 func (s *Server) handlerGetOrderStatusList(writer http.ResponseWriter, request *http.Request) {
-	token := request.Context().Value("token")
-	if token == nil {
-		http.Error(writer, "user not authorized", http.StatusUnauthorized)
+	user := s.getUserAuthData(writer, request)
+	if user == nil {
 		return
 	}
-	demoUser := storage.User{Login: "admin", Password: "admin"}
 
-	statusList := s.Storage.GetOrderStatusList(request.Context(), demoUser)
+	statusList := s.Storage.GetOrderStatusList(request.Context(), *user)
 	rJson, err := json.Marshal(statusList)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
@@ -114,15 +122,12 @@ func (s *Server) handlerGetOrderStatusList(writer http.ResponseWriter, request *
 
 // handlerGetBalance получение текущего баланса счёта баллов лояльности пользователя
 func (s *Server) handlerGetBalance(writer http.ResponseWriter, request *http.Request) {
-	token := request.Context().Value("token")
-	if token == nil {
-		http.Error(writer, "user not authorized", http.StatusUnauthorized)
+	user := s.getUserAuthData(writer, request)
+	if user == nil {
 		return
 	}
 
-	demoUser := storage.User{Login: "admin", Password: "admin"}
-
-	balance, err := s.Storage.GetBalance(request.Context(), demoUser)
+	balance, err := s.Storage.GetBalance(request.Context(), *user)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
@@ -144,12 +149,10 @@ func (s *Server) handlerGetBalance(writer http.ResponseWriter, request *http.Req
 
 // handlerWithdrawBonuses запрос на списание баллов с накопительного счёта в счёт оплаты нового заказа
 func (s *Server) handlerWithdrawBonuses(writer http.ResponseWriter, request *http.Request) {
-	token := request.Context().Value("token")
-	if token == nil {
-		http.Error(writer, "user not authorized", http.StatusUnauthorized)
+	user := s.getUserAuthData(writer, request)
+	if user == nil {
 		return
 	}
-	demoUser := storage.User{Login: "admin", Password: "admin"}
 
 	// считать тело запроса
 	r := struct {
@@ -168,7 +171,7 @@ func (s *Server) handlerWithdrawBonuses(writer http.ResponseWriter, request *htt
 		return
 	}
 
-	err = s.Storage.AddWithdrawn(request.Context(), r.Order, r.Sum, demoUser)
+	err = s.Storage.AddWithdrawn(request.Context(), r.Order, r.Sum, *user)
 	if errors.Is(err, storage.ErrBalanceExceeded) {
 		http.Error(writer, err.Error(), http.StatusPaymentRequired)
 		return
@@ -177,14 +180,12 @@ func (s *Server) handlerWithdrawBonuses(writer http.ResponseWriter, request *htt
 
 // handlerGetWithdrawals получение информации о выводе средств с накопительного счёта пользователем
 func (s *Server) handlerGetWithdrawals(writer http.ResponseWriter, request *http.Request) {
-	token := request.Context().Value("token")
-	if token == nil {
-		http.Error(writer, "user not authorized", http.StatusUnauthorized)
+	user := s.getUserAuthData(writer, request)
+	if user == nil {
 		return
 	}
-	demoUser := storage.User{Login: "admin", Password: "admin"}
 
-	withdrawalsList := s.Storage.GetWithdrawnList(request.Context(), demoUser)
+	withdrawalsList := s.Storage.GetWithdrawnList(request.Context(), *user)
 	if len(withdrawalsList) == 0 {
 		writer.WriteHeader(http.StatusNoContent)
 		return
