@@ -228,14 +228,14 @@ func (db *SQLStorage) GetOrdersWithTemporaryStatus() ([]OrderStatus, error) {
 	ctx := context.Background()
 	result := make([]OrderStatus, 0)
 	rows, err := db.Connection.QueryContext(ctx,
-		"SELECT order_id, status, amount, uploaded_at, user_id FROM orders WHERE status IN (`$1`,`$2`)",
+		`SELECT order_id, status, amount, uploaded_at, user_id FROM orders WHERE status IN ($1, $2)`,
 		"NEW", "PROCESSING")
 	if err != nil {
 		return nil, err
 	}
 	for rows.Next() {
 		oS := OrderStatus{}
-		err := rows.Scan(&oS)
+		err := rows.Scan(&oS.Number, &oS.Status, &oS.Amount, &oS.UploadedAt, &oS.UserId)
 		if err != nil {
 			return nil, err
 		}
@@ -254,8 +254,8 @@ func (db *SQLStorage) UpdateOrderStatuses(orderStatusList []OrderStatus) error {
 
 	for _, oS := range orderStatusList {
 		_, err = tx.ExecContext(ctx,
-			"INSERT INTO orders(order_id, status, amount) VALUES ($1, $2, $3)",
-			oS.Number, oS.Status, oS.Amount)
+			"UPDATE orders SET status = $1, amount = $2 WHERE order_id = $3",
+			oS.Status, oS.Amount, oS.Number)
 		if err != nil {
 			return err
 		}
