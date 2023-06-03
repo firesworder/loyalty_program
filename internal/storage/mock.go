@@ -57,13 +57,13 @@ var MockOrderStatusData = []OrderStatus{
 
 var MockWithdrawnData = []Withdrawn{
 	{
-		OrderId:     "order6",
+		OrderID:     "order6",
 		Amount:      100,
 		ProcessedAt: time.Date(2023, 04, 02, 12, 0, 0, 0, time.Local),
 		UserId:      0,
 	},
 	{
-		OrderId:     "order7",
+		OrderID:     "order7",
 		Amount:      200,
 		ProcessedAt: time.Date(2023, 05, 02, 12, 0, 0, 0, time.Local),
 		UserId:      1,
@@ -195,7 +195,7 @@ func (m *Mock) AddWithdrawn(ctx context.Context, orderNumber string, amount int6
 	}
 
 	w := Withdrawn{
-		OrderId:     orderNumber,
+		OrderID:     orderNumber,
 		Amount:      amount,
 		ProcessedAt: time.Now(),
 		UserId:      user.ID,

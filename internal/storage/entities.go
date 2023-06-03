@@ -22,7 +22,7 @@ type OrderStatus struct {
 }
 
 type Withdrawn struct {
-	OrderId     string    `json:"order"`
+	OrderID     string    `json:"order"`
 	Amount      int64     `json:"sum"`
 	ProcessedAt time.Time `json:"processed_at"`
 	UserId      int64     `json:"-"`

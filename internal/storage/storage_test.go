@@ -116,7 +116,6 @@ func TestSQLStorage_AddUser(t *testing.T) {
 			args:    args{login: "demo1", password: "demo1"},
 			wantErr: nil,
 		},
-		// todo: тесты должно не зависеть друг от друга
 		{
 			name:    "Test 2. User with that login already exist",
 			args:    args{login: "demo1", password: "password"},
@@ -380,19 +379,19 @@ func TestSQLStorage_GetWithdrawnList(t *testing.T) {
 
 	demoWithdrawn := []Withdrawn{
 		{
-			OrderId:     "624605372751",
+			OrderID:     "624605372751",
 			Amount:      300,
 			ProcessedAt: time.Date(2023, 03, 10, 12, 0, 0, 0, time.Local),
 			UserId:      userId1,
 		},
 		{
-			OrderId:     "000971335161",
+			OrderID:     "000971335161",
 			Amount:      50,
 			ProcessedAt: time.Date(2023, 02, 10, 12, 0, 0, 0, time.Local),
 			UserId:      userId2,
 		},
 		{
-			OrderId:     "9359943520",
+			OrderID:     "9359943520",
 			Amount:      125,
 			ProcessedAt: time.Date(2023, 01, 10, 12, 0, 0, 0, time.Local),
 			UserId:      userId1,
@@ -402,7 +401,7 @@ func TestSQLStorage_GetWithdrawnList(t *testing.T) {
 	for _, w := range demoWithdrawn {
 		_, err = db.Connection.ExecContext(context.Background(),
 			"INSERT INTO withdrawn(order_id, amount, uploaded_at, user_id) VALUES ($1, $2, $3, $4)",
-			w.OrderId, w.Amount, w.ProcessedAt, w.UserId)
+			w.OrderID, w.Amount, w.ProcessedAt, w.UserId)
 		require.NoError(t, err)
 	}
 	err = tx.Commit()
