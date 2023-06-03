@@ -143,13 +143,13 @@ func TestSQLStorage_GetBalance(t *testing.T) {
 	// вставка демо данных
 	undoTestChanges(t, db.Connection)
 
-	var userId int64
+	var userID int64
 	err = db.Connection.QueryRowContext(context.Background(),
-		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userId)
+		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userID)
 	require.NoError(t, err)
 	_, err = db.Connection.ExecContext(context.Background(),
 		"INSERT INTO balance(balance, withdrawn, user_id) VALUES ($1, $2, $3)",
-		250, 130, userId)
+		250, 130, userID)
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -161,11 +161,11 @@ func TestSQLStorage_GetBalance(t *testing.T) {
 		{
 			name: "Test 1. Correct getBalance.",
 			user: User{
-				ID:       userId,
+				ID:       userID,
 				Login:    "demoU",
 				Password: "demoU",
 			},
-			wantBalance: &Balance{UserId: userId, BalanceAmount: 250, WithdrawnAmount: 130},
+			wantBalance: &Balance{UserId: userID, BalanceAmount: 250, WithdrawnAmount: 130},
 			wantErr:     nil,
 		},
 		{
@@ -201,12 +201,12 @@ func TestSQLStorage_GetOrderStatusList(t *testing.T) {
 	// вставка демо данных
 	undoTestChanges(t, db.Connection)
 
-	var userId1, userId2 int64
+	var userID1, userID2 int64
 	err = db.Connection.QueryRowContext(context.Background(),
-		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userId1)
+		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userID1)
 	require.NoError(t, err)
 	err = db.Connection.QueryRowContext(context.Background(),
-		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "user2", "pw2").Scan(&userId2)
+		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "user2", "pw2").Scan(&userID2)
 	require.NoError(t, err)
 
 	// для пакетной вставки данных в дб
@@ -215,8 +215,8 @@ func TestSQLStorage_GetOrderStatusList(t *testing.T) {
 	defer tx.Rollback()
 
 	demo := demoOrderStatuses
-	demo[0].UserId, demo[2].UserId = userId1, userId1
-	demo[1].UserId, demo[3].UserId = userId2, userId2
+	demo[0].UserId, demo[2].UserId = userID1, userID1
+	demo[1].UserId, demo[3].UserId = userID2, userID2
 	for _, oS := range demo {
 		_, err = tx.ExecContext(context.Background(),
 			"INSERT INTO orders(order_id, status, amount, uploaded_at, user_id) VALUES ($1, $2, $3, $4, $5)",
@@ -235,7 +235,7 @@ func TestSQLStorage_GetOrderStatusList(t *testing.T) {
 		{
 			name: "Test 1. User has registered orders",
 			user: User{
-				ID:       userId1,
+				ID:       userID1,
 				Login:    "demoU",
 				Password: "demoU",
 			},
@@ -272,12 +272,12 @@ func TestSQLStorage_AddOrder(t *testing.T) {
 	// вставка тестовых данных
 	undoTestChanges(t, db.Connection)
 
-	var userId1, userId2 int64
+	var userID1, userID2 int64
 	err = db.Connection.QueryRowContext(context.Background(),
-		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userId1)
+		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userID1)
 	require.NoError(t, err)
 	err = db.Connection.QueryRowContext(context.Background(),
-		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "user2", "pw2").Scan(&userId2)
+		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "user2", "pw2").Scan(&userID2)
 	require.NoError(t, err)
 
 	// для пакетной вставки данных в дб
@@ -286,8 +286,8 @@ func TestSQLStorage_AddOrder(t *testing.T) {
 	defer tx.Rollback()
 
 	demo := demoOrderStatuses
-	demo[0].UserId, demo[2].UserId = userId1, userId1
-	demo[1].UserId, demo[3].UserId = userId2, userId2
+	demo[0].UserId, demo[2].UserId = userID1, userID1
+	demo[1].UserId, demo[3].UserId = userID2, userID2
 	for _, oS := range demo {
 		_, err = tx.ExecContext(context.Background(),
 			"INSERT INTO orders(order_id, status, amount, uploaded_at, user_id) VALUES ($1, $2, $3, $4, $5)",
@@ -311,7 +311,7 @@ func TestSQLStorage_AddOrder(t *testing.T) {
 			args: args{
 				orderNumber: "624605372751",
 				user: User{
-					ID:       userId1,
+					ID:       userID1,
 					Login:    "demoU",
 					Password: "demoU",
 				},
@@ -323,7 +323,7 @@ func TestSQLStorage_AddOrder(t *testing.T) {
 			args: args{
 				orderNumber: "9359943520",
 				user: User{
-					ID:       userId1,
+					ID:       userID1,
 					Login:    "demoU",
 					Password: "demoU",
 				},
@@ -335,7 +335,7 @@ func TestSQLStorage_AddOrder(t *testing.T) {
 			args: args{
 				orderNumber: "328257446760",
 				user: User{
-					ID:       userId1,
+					ID:       userID1,
 					Login:    "demoU",
 					Password: "demoU",
 				},
@@ -364,12 +364,12 @@ func TestSQLStorage_GetWithdrawnList(t *testing.T) {
 	// вставка тестовых данных
 	undoTestChanges(t, db.Connection)
 
-	var userId1, userId2 int64
+	var userID1, userID2 int64
 	err = db.Connection.QueryRowContext(context.Background(),
-		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userId1)
+		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userID1)
 	require.NoError(t, err)
 	err = db.Connection.QueryRowContext(context.Background(),
-		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "user2", "pw2").Scan(&userId2)
+		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "user2", "pw2").Scan(&userID2)
 	require.NoError(t, err)
 
 	// для пакетной вставки данных в дб
@@ -382,19 +382,19 @@ func TestSQLStorage_GetWithdrawnList(t *testing.T) {
 			OrderID:     "624605372751",
 			Amount:      300,
 			ProcessedAt: time.Date(2023, 03, 10, 12, 0, 0, 0, time.Local),
-			UserId:      userId1,
+			UserId:      userID1,
 		},
 		{
 			OrderID:     "000971335161",
 			Amount:      50,
 			ProcessedAt: time.Date(2023, 02, 10, 12, 0, 0, 0, time.Local),
-			UserId:      userId2,
+			UserId:      userID2,
 		},
 		{
 			OrderID:     "9359943520",
 			Amount:      125,
 			ProcessedAt: time.Date(2023, 01, 10, 12, 0, 0, 0, time.Local),
-			UserId:      userId1,
+			UserId:      userID1,
 		},
 	}
 
@@ -416,7 +416,7 @@ func TestSQLStorage_GetWithdrawnList(t *testing.T) {
 		{
 			name: "Test 1. Correct request",
 			user: User{
-				ID:       userId1,
+				ID:       userID1,
 				Login:    "demoU",
 				Password: "demoU",
 			},
@@ -453,13 +453,13 @@ func TestSQLStorage_AddWithdrawn(t *testing.T) {
 	// вставка тестовых данных
 	undoTestChanges(t, db.Connection)
 
-	var userId int64
+	var userID int64
 	err = db.Connection.QueryRowContext(context.Background(),
-		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userId)
+		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userID)
 	require.NoError(t, err)
 
 	_, err = db.Connection.ExecContext(context.Background(),
-		"INSERT INTO balance(balance, withdrawn, user_id) VALUES ($1, $2, $3)", 1000, 800, userId)
+		"INSERT INTO balance(balance, withdrawn, user_id) VALUES ($1, $2, $3)", 1000, 800, userID)
 	require.NoError(t, err)
 
 	type args struct {
@@ -479,12 +479,12 @@ func TestSQLStorage_AddWithdrawn(t *testing.T) {
 				orderNumber: "328257446760",
 				amount:      200,
 				user: User{
-					ID:       userId,
+					ID:       userID,
 					Login:    "demoU",
 					Password: "demoU",
 				},
 			},
-			wantBalance: &Balance{BalanceAmount: 800, WithdrawnAmount: 1000, UserId: userId},
+			wantBalance: &Balance{BalanceAmount: 800, WithdrawnAmount: 1000, UserId: userID},
 			wantErr:     nil,
 		},
 		{
@@ -493,13 +493,13 @@ func TestSQLStorage_AddWithdrawn(t *testing.T) {
 				orderNumber: "9359943520",
 				amount:      1500,
 				user: User{
-					ID:       userId,
+					ID:       userID,
 					Login:    "demoU",
 					Password: "demoU",
 				},
 			},
 			// влияет тест сверху! если запускать отдельно - цифры будут отличаться(1000 и 800)
-			wantBalance: &Balance{BalanceAmount: 800, WithdrawnAmount: 1000, UserId: userId},
+			wantBalance: &Balance{BalanceAmount: 800, WithdrawnAmount: 1000, UserId: userID},
 			wantErr:     ErrBalanceExceeded,
 		},
 	}
@@ -526,12 +526,12 @@ func TestSQLStorage_GetOrdersWithTemporaryStatus(t *testing.T) {
 	// вставка тестовых данных
 	undoTestChanges(t, db.Connection)
 
-	var userId1, userId2 int64
+	var userID1, userID2 int64
 	err = db.Connection.QueryRowContext(context.Background(),
-		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userId1)
+		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userID1)
 	require.NoError(t, err)
 	err = db.Connection.QueryRowContext(context.Background(),
-		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "user2", "pw2").Scan(&userId2)
+		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "user2", "pw2").Scan(&userID2)
 	require.NoError(t, err)
 
 	// для пакетной вставки данных в дб
@@ -540,8 +540,8 @@ func TestSQLStorage_GetOrdersWithTemporaryStatus(t *testing.T) {
 	defer tx.Rollback()
 
 	demo := demoOrderStatuses
-	demo[0].UserId, demo[2].UserId = userId1, userId1
-	demo[1].UserId, demo[3].UserId = userId2, userId2
+	demo[0].UserId, demo[2].UserId = userID1, userID1
+	demo[1].UserId, demo[3].UserId = userID2, userID2
 	for _, oS := range demo {
 		_, err = tx.ExecContext(context.Background(),
 			"INSERT INTO orders(order_id, status, amount, uploaded_at, user_id) VALUES ($1, $2, $3, $4, $5)",
@@ -584,9 +584,9 @@ func TestSQLStorage_GetUser(t *testing.T) {
 	// вставка тестовых данных
 	undoTestChanges(t, db.Connection)
 
-	var userId1 int64
+	var userID1 int64
 	err = db.Connection.QueryRowContext(context.Background(),
-		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userId1)
+		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userID1)
 	require.NoError(t, err)
 
 	type args struct {
@@ -603,7 +603,7 @@ func TestSQLStorage_GetUser(t *testing.T) {
 			name: "Test 1. User exist",
 			args: args{login: "demoU", password: "demoU"},
 			wantUser: &User{
-				ID:       userId1,
+				ID:       userID1,
 				Login:    "demoU",
 				Password: "demoU",
 			},
@@ -639,14 +639,14 @@ func TestSQLStorage_UpdateBalance(t *testing.T) {
 	// вставка тестовых данных
 	undoTestChanges(t, db.Connection)
 
-	var userId int64
+	var userID int64
 	err = db.Connection.QueryRowContext(context.Background(),
-		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userId)
+		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userID)
 	require.NoError(t, err)
 
 	_, err = db.Connection.ExecContext(context.Background(),
 		"INSERT INTO balance(balance, withdrawn, user_id) VALUES ($1, $2, $3)",
-		250, 130, userId)
+		250, 130, userID)
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -657,8 +657,8 @@ func TestSQLStorage_UpdateBalance(t *testing.T) {
 	}{
 		{
 			name:        "Test 1. Correct update balance",
-			argBalance:  Balance{UserId: userId, WithdrawnAmount: 150, BalanceAmount: 230},
-			wantBalance: &Balance{UserId: userId, WithdrawnAmount: 150, BalanceAmount: 230},
+			argBalance:  Balance{UserId: userID, WithdrawnAmount: 150, BalanceAmount: 230},
+			wantBalance: &Balance{UserId: userID, WithdrawnAmount: 150, BalanceAmount: 230},
 			wantErr:     nil,
 		},
 		{
@@ -698,12 +698,12 @@ func TestSQLStorage_UpdateOrderStatuses(t *testing.T) {
 	// вставка тестовых данных
 	undoTestChanges(t, db.Connection)
 
-	var userId1, userId2 int64
+	var userID1, userID2 int64
 	err = db.Connection.QueryRowContext(context.Background(),
-		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userId1)
+		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userID1)
 	require.NoError(t, err)
 	err = db.Connection.QueryRowContext(context.Background(),
-		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "user2", "pw2").Scan(&userId2)
+		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "user2", "pw2").Scan(&userID2)
 	require.NoError(t, err)
 
 	// для пакетной вставки данных в дб
@@ -712,8 +712,8 @@ func TestSQLStorage_UpdateOrderStatuses(t *testing.T) {
 	defer tx.Rollback()
 
 	demo := demoOrderStatuses
-	demo[0].UserId, demo[2].UserId = userId1, userId1
-	demo[1].UserId, demo[3].UserId = userId2, userId2
+	demo[0].UserId, demo[2].UserId = userID1, userID1
+	demo[1].UserId, demo[3].UserId = userID2, userID2
 	for _, oS := range demo {
 		_, err = tx.ExecContext(context.Background(),
 			"INSERT INTO orders(order_id, status, amount, uploaded_at, user_id) VALUES ($1, $2, $3, $4, $5)",
