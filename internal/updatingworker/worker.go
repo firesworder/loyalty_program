@@ -75,9 +75,9 @@ func (w *Worker) updateTick() {
 }
 
 type responseBody struct {
-	Order  string `json:"order"`
-	Status string `json:"status"`
-	Amount int64  `json:"accrual"`
+	Order  string  `json:"order"`
+	Status string  `json:"status"`
+	Amount float64 `json:"accrual"`
 }
 
 func (w *Worker) sendOrderStatusRequest(orderNumber string) (rB responseBody, err error) {

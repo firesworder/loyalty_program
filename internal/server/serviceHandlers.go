@@ -134,8 +134,8 @@ func (s *Server) handlerGetBalance(writer http.ResponseWriter, request *http.Req
 	}
 
 	r := struct {
-		Current   int64 `json:"current"`
-		Withdrawn int64 `json:"withdrawn"`
+		Current   float64 `json:"current"`
+		Withdrawn float64 `json:"withdrawn"`
 	}{Current: balance.BalanceAmount, Withdrawn: balance.WithdrawnAmount}
 
 	rJSON, err := json.Marshal(r)
@@ -156,8 +156,8 @@ func (s *Server) handlerWithdrawBonuses(writer http.ResponseWriter, request *htt
 
 	// считать тело запроса
 	r := struct {
-		Order string `json:"order"`
-		Sum   int64  `json:"sum"`
+		Order string  `json:"order"`
+		Sum   float64 `json:"sum"`
 	}{}
 	err := json.NewDecoder(request.Body).Decode(&r)
 	if err != nil || (r.Order == "" || r.Sum == 0) {

@@ -14,6 +14,6 @@ type Storage interface {
 	UpdateOrderStatuses(ctx context.Context, orderStatusList []OrderStatus) error
 	GetOrdersWithTemporaryStatus(ctx context.Context) ([]OrderStatus, error)
 
-	AddWithdrawn(ctx context.Context, orderNumber string, amount int64, user User) error
+	AddWithdrawn(ctx context.Context, orderNumber string, amount float64, user User) error
 	GetWithdrawnList(ctx context.Context, user User) []Withdrawn
 }

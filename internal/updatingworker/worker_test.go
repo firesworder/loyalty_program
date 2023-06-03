@@ -24,9 +24,9 @@ func getMockHandler(t *testing.T) http.HandlerFunc {
 			return
 		} else {
 			r := struct {
-				Order  string `json:"order"`
-				Status string `json:"status"`
-				Amount int64  `json:"accrual"`
+				Order  string  `json:"order"`
+				Status string  `json:"status"`
+				Amount float64 `json:"accrual"`
 			}{
 				Order:  orderNumberReq,
 				Status: "PROCESSED",

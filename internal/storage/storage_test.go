@@ -464,7 +464,7 @@ func TestSQLStorage_AddWithdrawn(t *testing.T) {
 
 	type args struct {
 		orderNumber string
-		amount      int64
+		amount      float64
 		user        User
 	}
 	tests := []struct {

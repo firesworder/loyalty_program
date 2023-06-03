@@ -98,7 +98,8 @@ func (db *SQLStorage) GetUser(ctx context.Context, login, password string) (*Use
 }
 
 func (db *SQLStorage) GetBalance(ctx context.Context, user User) (*Balance, error) {
-	var b, w, uid int64
+	var uid int64
+	var b, w float64
 	err := db.Connection.QueryRowContext(ctx,
 		"SELECT balance, withdrawn, user_id FROM balance WHERE user_id = $1 LIMIT 1", user.ID,
 	).Scan(&b, &w, &uid)
@@ -165,9 +166,9 @@ func (db *SQLStorage) AddOrder(ctx context.Context, orderNumber string, user Use
 	return nil
 }
 
-func (db *SQLStorage) AddWithdrawn(ctx context.Context, orderNumber string, amount int64, user User) error {
+func (db *SQLStorage) AddWithdrawn(ctx context.Context, orderNumber string, amount float64, user User) error {
 	// проверка баланса на возможность списания
-	var curBalance, curWithdrawn int64
+	var curBalance, curWithdrawn float64
 	err := db.Connection.QueryRowContext(ctx,
 		"SELECT balance, withdrawn FROM balance WHERE user_id = $1", user.ID).Scan(&curBalance, &curWithdrawn)
 	if err != nil {
@@ -276,7 +277,7 @@ func (db *SQLStorage) UpdateOrderStatuses(ctx context.Context, orderStatusList [
 	}
 	defer tx.Rollback()
 
-	userBalanceUpdates := map[int64]int64{}
+	userBalanceUpdates := map[int64]float64{}
 	for _, oS := range orderStatusList {
 		if oS.Status == "PROCESSED" && oS.Amount != 0 {
 			userBalanceUpdates[oS.UserID] += oS.Amount

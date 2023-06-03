@@ -184,7 +184,7 @@ func (m *Mock) AddOrder(ctx context.Context, orderNumber string, user User) erro
 	return nil
 }
 
-func (m *Mock) AddWithdrawn(ctx context.Context, orderNumber string, amount int64, user User) error {
+func (m *Mock) AddWithdrawn(ctx context.Context, orderNumber string, amount float64, user User) error {
 	curBalance, err := m.GetBalance(ctx, user)
 	if err != nil {
 		return err
