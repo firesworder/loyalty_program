@@ -71,7 +71,7 @@ var MockWithdrawnData = []Withdrawn{
 }
 
 var MockUserData = []User{
-	{ID: 0, Login: "admin", Password: "admin"},
+	{ID: 0, Login: "admin", Password: "21232f297a57a5a743894a0e4a801fc3"},
 	{ID: 1, Login: "postgres", Password: "postgres"},
 }
 
