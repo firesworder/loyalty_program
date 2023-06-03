@@ -9,8 +9,6 @@ import (
 	"time"
 )
 
-// todo: добавить везде контекст!!!
-
 type SQLStorage struct {
 	Connection *sql.DB
 }
@@ -48,9 +46,7 @@ func (db *SQLStorage) CreateTablesIfNotExists(ctx context.Context) (err error) {
 	return nil
 }
 
-func (db *SQLStorage) AddUser(login, password string) (*User, error) {
-	ctx := context.Background()
-
+func (db *SQLStorage) AddUser(ctx context.Context, login, password string) (*User, error) {
 	var id int64
 	err := db.Connection.QueryRowContext(ctx,
 		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id",
@@ -68,9 +64,7 @@ func (db *SQLStorage) AddUser(login, password string) (*User, error) {
 	return &u, nil
 }
 
-func (db *SQLStorage) GetUser(login, password string) (*User, error) {
-	ctx := context.Background()
-
+func (db *SQLStorage) GetUser(ctx context.Context, login, password string) (*User, error) {
 	u := User{}
 	err := db.Connection.QueryRowContext(ctx,
 		"SELECT id, login, password FROM users WHERE login = $1 AND password = $2",
@@ -84,8 +78,7 @@ func (db *SQLStorage) GetUser(login, password string) (*User, error) {
 	return &u, nil
 }
 
-func (db *SQLStorage) GetBalance(user User) (*Balance, error) {
-	ctx := context.Background()
+func (db *SQLStorage) GetBalance(ctx context.Context, user User) (*Balance, error) {
 	var b, w, uid int64
 	err := db.Connection.QueryRowContext(ctx,
 		"SELECT balance, withdrawn, user_id FROM balance WHERE user_id = $1 LIMIT 1", user.ID,
@@ -96,9 +89,9 @@ func (db *SQLStorage) GetBalance(user User) (*Balance, error) {
 	return &Balance{UserId: uid, BalanceAmount: b, WithdrawnAmount: w}, nil
 }
 
-func (db *SQLStorage) GetOrderStatusList(user User) []OrderStatus {
+func (db *SQLStorage) GetOrderStatusList(ctx context.Context, user User) []OrderStatus {
 	result := make([]OrderStatus, 0)
-	rows, err := db.Connection.QueryContext(context.Background(),
+	rows, err := db.Connection.QueryContext(ctx,
 		`SELECT order_id, status, amount, uploaded_at, user_id FROM orders WHERE user_id = $1`, user.ID)
 
 	var oS OrderStatus
@@ -115,8 +108,7 @@ func (db *SQLStorage) GetOrderStatusList(user User) []OrderStatus {
 	return result
 }
 
-func (db *SQLStorage) AddOrder(orderNumber string, user User) error {
-	ctx := context.Background()
+func (db *SQLStorage) AddOrder(ctx context.Context, orderNumber string, user User) error {
 	// проверка существования заказа в orders
 	exOrderId, exUserId := "", int64(0)
 	err := db.Connection.QueryRowContext(ctx,
@@ -146,8 +138,7 @@ func (db *SQLStorage) AddOrder(orderNumber string, user User) error {
 	return nil
 }
 
-func (db *SQLStorage) AddWithdrawn(orderNumber string, amount int64, user User) error {
-	ctx := context.Background()
+func (db *SQLStorage) AddWithdrawn(ctx context.Context, orderNumber string, amount int64, user User) error {
 	// проверка баланса на возможность списания
 	var curBalance, curWithdrawn int64
 	err := db.Connection.QueryRowContext(ctx,
@@ -202,8 +193,7 @@ func (db *SQLStorage) AddWithdrawn(orderNumber string, amount int64, user User) 
 	return tx.Commit()
 }
 
-func (db *SQLStorage) GetWithdrawnList(user User) []Withdrawn {
-	ctx := context.Background()
+func (db *SQLStorage) GetWithdrawnList(ctx context.Context, user User) []Withdrawn {
 	result := make([]Withdrawn, 0)
 	rows, err := db.Connection.QueryContext(ctx,
 		`SELECT order_id, amount, uploaded_at, user_id FROM withdrawn WHERE user_id = $1`,
@@ -224,8 +214,7 @@ func (db *SQLStorage) GetWithdrawnList(user User) []Withdrawn {
 	return result
 }
 
-func (db *SQLStorage) GetOrdersWithTemporaryStatus() ([]OrderStatus, error) {
-	ctx := context.Background()
+func (db *SQLStorage) GetOrdersWithTemporaryStatus(ctx context.Context) ([]OrderStatus, error) {
 	result := make([]OrderStatus, 0)
 	rows, err := db.Connection.QueryContext(ctx,
 		`SELECT order_id, status, amount, uploaded_at, user_id FROM orders WHERE status IN ($1, $2)`,
@@ -244,8 +233,7 @@ func (db *SQLStorage) GetOrdersWithTemporaryStatus() ([]OrderStatus, error) {
 	return result, nil
 }
 
-func (db *SQLStorage) UpdateOrderStatuses(orderStatusList []OrderStatus) error {
-	ctx := context.Background()
+func (db *SQLStorage) UpdateOrderStatuses(ctx context.Context, orderStatusList []OrderStatus) error {
 	tx, err := db.Connection.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -264,8 +252,7 @@ func (db *SQLStorage) UpdateOrderStatuses(orderStatusList []OrderStatus) error {
 	return tx.Commit()
 }
 
-func (db *SQLStorage) UpdateBalance(newBalance Balance) error {
-	ctx := context.Background()
+func (db *SQLStorage) UpdateBalance(ctx context.Context, newBalance Balance) error {
 	result, err := db.Connection.ExecContext(ctx,
 		"UPDATE balance SET balance = $1, withdrawn = $2 WHERE user_id = $3",
 		newBalance.BalanceAmount, newBalance.WithdrawnAmount, newBalance.UserId)

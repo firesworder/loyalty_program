@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
@@ -95,7 +96,7 @@ func (m *Mock) ResetData() {
 	m.Balance = MockUserBalanceData
 }
 
-func (m *Mock) AddUser(login, password string) (*User, error) {
+func (m *Mock) AddUser(ctx context.Context, login, password string) (*User, error) {
 	for _, user := range m.Users {
 		if user.Login == login {
 			return nil, ErrLoginExist
@@ -110,7 +111,7 @@ func (m *Mock) AddUser(login, password string) (*User, error) {
 	return &u, nil
 }
 
-func (m *Mock) GetUser(login, password string) (*User, error) {
+func (m *Mock) GetUser(ctx context.Context, login, password string) (*User, error) {
 	for _, user := range m.Users {
 		if user.Login == login {
 			if user.Password == password {
@@ -123,7 +124,7 @@ func (m *Mock) GetUser(login, password string) (*User, error) {
 	return nil, ErrAuthDataIncorrect
 }
 
-func (m *Mock) GetBalance(user User) (*Balance, error) {
+func (m *Mock) GetBalance(ctx context.Context, user User) (*Balance, error) {
 	for _, b := range m.Balance {
 		if b.UserId == user.ID {
 			return &b, nil
@@ -132,7 +133,7 @@ func (m *Mock) GetBalance(user User) (*Balance, error) {
 	return nil, fmt.Errorf("user balance not defined")
 }
 
-func (m *Mock) UpdateBalance(newBalance Balance) error {
+func (m *Mock) UpdateBalance(ctx context.Context, newBalance Balance) error {
 	for i := range m.Balance {
 		if m.Balance[i].UserId == newBalance.UserId {
 			m.Balance[i] = newBalance
@@ -142,7 +143,7 @@ func (m *Mock) UpdateBalance(newBalance Balance) error {
 	return fmt.Errorf("user balance not defined")
 }
 
-func (m *Mock) GetWithdrawnList(user User) []Withdrawn {
+func (m *Mock) GetWithdrawnList(ctx context.Context, user User) []Withdrawn {
 	result := make([]Withdrawn, 0)
 	for _, mW := range m.Withdrawn {
 		if mW.UserId == user.ID {
@@ -152,7 +153,7 @@ func (m *Mock) GetWithdrawnList(user User) []Withdrawn {
 	return result
 }
 
-func (m *Mock) GetOrderStatusList(user User) []OrderStatus {
+func (m *Mock) GetOrderStatusList(ctx context.Context, user User) []OrderStatus {
 	result := make([]OrderStatus, 0)
 	for _, mOS := range m.OrderStatus {
 		if mOS.UserId == user.ID {
@@ -162,7 +163,7 @@ func (m *Mock) GetOrderStatusList(user User) []OrderStatus {
 	return result
 }
 
-func (m *Mock) AddOrder(orderNumber string, user User) error {
+func (m *Mock) AddOrder(ctx context.Context, orderNumber string, user User) error {
 	for _, order := range m.OrderStatus {
 		if order.Number == orderNumber {
 			if order.UserId == user.ID {
@@ -183,8 +184,8 @@ func (m *Mock) AddOrder(orderNumber string, user User) error {
 	return nil
 }
 
-func (m *Mock) AddWithdrawn(orderNumber string, amount int64, user User) error {
-	curBalance, err := m.GetBalance(user)
+func (m *Mock) AddWithdrawn(ctx context.Context, orderNumber string, amount int64, user User) error {
+	curBalance, err := m.GetBalance(ctx, user)
 	if err != nil {
 		return err
 	}
@@ -205,7 +206,7 @@ func (m *Mock) AddWithdrawn(orderNumber string, amount int64, user User) error {
 		BalanceAmount:   curBalance.BalanceAmount - amount,
 		WithdrawnAmount: curBalance.WithdrawnAmount + amount,
 	}
-	err = m.UpdateBalance(newBalance)
+	err = m.UpdateBalance(ctx, newBalance)
 	if err != nil {
 		return err
 	}
@@ -213,7 +214,7 @@ func (m *Mock) AddWithdrawn(orderNumber string, amount int64, user User) error {
 	return nil
 }
 
-func (m *Mock) GetOrdersWithTemporaryStatus() ([]OrderStatus, error) {
+func (m *Mock) GetOrdersWithTemporaryStatus(ctx context.Context) ([]OrderStatus, error) {
 	result := make([]OrderStatus, 0)
 	for _, oS := range m.OrderStatus {
 		if oS.Status == "NEW" || oS.Status == "PROCESSING" {
@@ -223,7 +224,7 @@ func (m *Mock) GetOrdersWithTemporaryStatus() ([]OrderStatus, error) {
 	return result, nil
 }
 
-func (m *Mock) UpdateOrderStatuses(orderStatusList []OrderStatus) error {
+func (m *Mock) UpdateOrderStatuses(ctx context.Context, orderStatusList []OrderStatus) error {
 	for _, uOS := range orderStatusList {
 		for cOSIndex := range m.OrderStatus {
 			if uOS.Number == m.OrderStatus[cOSIndex].Number {
@@ -233,8 +234,4 @@ func (m *Mock) UpdateOrderStatuses(orderStatusList []OrderStatus) error {
 		}
 	}
 	return nil
-}
-
-func (m *Mock) GetAllOrderStatusList() ([]OrderStatus, error) {
-	return m.OrderStatus, nil
 }

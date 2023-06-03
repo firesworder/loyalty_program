@@ -126,7 +126,7 @@ func TestSQLStorage_AddUser(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err = db.AddUser(tt.login, tt.password)
+			_, err = db.AddUser(context.Background(), tt.login, tt.password)
 			assert.ErrorIs(t, err, tt.wantErr)
 		})
 	}
@@ -183,7 +183,7 @@ func TestSQLStorage_GetBalance(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			balance, err := db.GetBalance(tt.user)
+			balance, err := db.GetBalance(context.Background(), tt.user)
 			assert.Equal(t, tt.wantErr, err)
 			assert.Equal(t, tt.wantBalance, balance)
 		})
@@ -255,7 +255,7 @@ func TestSQLStorage_GetOrderStatusList(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotOS := db.GetOrderStatusList(tt.user)
+			gotOS := db.GetOrderStatusList(context.Background(), tt.user)
 			assert.Equal(t, tt.wantOS, gotOS)
 		})
 	}
@@ -346,7 +346,7 @@ func TestSQLStorage_AddOrder(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err = db.AddOrder(tt.orderNumber, tt.args.user)
+			err = db.AddOrder(context.Background(), tt.orderNumber, tt.args.user)
 			assert.ErrorIs(t, err, tt.wantErr)
 		})
 	}
@@ -412,7 +412,6 @@ func TestSQLStorage_GetWithdrawnList(t *testing.T) {
 		name      string
 		user      User
 		wantWList []Withdrawn
-		// todo: добавить ошибку
 		//wantErr error
 	}{
 		{
@@ -436,7 +435,7 @@ func TestSQLStorage_GetWithdrawnList(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotWList := db.GetWithdrawnList(tt.user)
+			gotWList := db.GetWithdrawnList(context.Background(), tt.user)
 			assert.Equal(t, tt.wantWList, gotWList)
 		})
 	}
@@ -507,10 +506,10 @@ func TestSQLStorage_AddWithdrawn(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err = db.AddWithdrawn(tt.orderNumber, tt.amount, tt.user)
+			err = db.AddWithdrawn(context.Background(), tt.orderNumber, tt.amount, tt.user)
 			assert.ErrorIs(t, err, tt.wantErr)
 
-			balance, err := db.GetBalance(tt.user)
+			balance, err := db.GetBalance(context.Background(), tt.user)
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantBalance, balance)
 		})
@@ -566,7 +565,7 @@ func TestSQLStorage_GetOrdersWithTemporaryStatus(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			oSList, err := db.GetOrdersWithTemporaryStatus()
+			oSList, err := db.GetOrdersWithTemporaryStatus(context.Background())
 			assert.Equal(t, tt.wantOS, oSList)
 			assert.ErrorIs(t, err, tt.wantErr)
 		})
@@ -620,7 +619,7 @@ func TestSQLStorage_GetUser(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotUser, err := db.GetUser(tt.login, tt.password)
+			gotUser, err := db.GetUser(context.Background(), tt.login, tt.password)
 			assert.Equal(t, tt.wantUser, gotUser)
 			assert.ErrorIs(t, err, tt.wantErr)
 
@@ -672,7 +671,7 @@ func TestSQLStorage_UpdateBalance(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err = db.UpdateBalance(tt.argBalance)
+			err = db.UpdateBalance(context.Background(), tt.argBalance)
 			assert.Equal(t, err, tt.wantErr)
 
 			// получаем текущие значения баланса из бд
@@ -737,7 +736,7 @@ func TestSQLStorage_UpdateOrderStatuses(t *testing.T) {
 	}
 
 	// само тестирование
-	err = db.UpdateOrderStatuses(updatedOS)
+	err = db.UpdateOrderStatuses(context.Background(), updatedOS)
 	require.NoError(t, err)
 
 	// беру текущее состояние таблицы orders

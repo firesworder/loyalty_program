@@ -79,7 +79,7 @@ func (s *Server) handlerRegisterOrderNumber(writer http.ResponseWriter, request 
 	}
 
 	// проверить, что его нет в списке заказов(2 ошибки - уже и уже другим)
-	err = s.Storage.AddOrder(orderNumber, demoUser)
+	err = s.Storage.AddOrder(request.Context(), orderNumber, demoUser)
 	if err != nil {
 		if errors.Is(err, storage.ErrOrderRegByThatUser) {
 			writer.WriteHeader(http.StatusOK)
@@ -102,7 +102,7 @@ func (s *Server) handlerGetOrderStatusList(writer http.ResponseWriter, request *
 	}
 	demoUser := storage.User{Login: "admin", Password: "admin"}
 
-	statusList := s.Storage.GetOrderStatusList(demoUser)
+	statusList := s.Storage.GetOrderStatusList(request.Context(), demoUser)
 	rJson, err := json.Marshal(statusList)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
@@ -113,7 +113,6 @@ func (s *Server) handlerGetOrderStatusList(writer http.ResponseWriter, request *
 }
 
 // handlerGetBalance получение текущего баланса счёта баллов лояльности пользователя
-// todo: исправить, GetWithdrawn - и баланс из одной функции берутся
 func (s *Server) handlerGetBalance(writer http.ResponseWriter, request *http.Request) {
 	token := request.Context().Value("token")
 	if token == nil {
@@ -123,7 +122,7 @@ func (s *Server) handlerGetBalance(writer http.ResponseWriter, request *http.Req
 
 	demoUser := storage.User{Login: "admin", Password: "admin"}
 
-	balance, err := s.Storage.GetBalance(demoUser)
+	balance, err := s.Storage.GetBalance(request.Context(), demoUser)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
@@ -169,7 +168,7 @@ func (s *Server) handlerWithdrawBonuses(writer http.ResponseWriter, request *htt
 		return
 	}
 
-	err = s.Storage.AddWithdrawn(r.Order, r.Sum, demoUser)
+	err = s.Storage.AddWithdrawn(request.Context(), r.Order, r.Sum, demoUser)
 	if errors.Is(err, storage.ErrBalanceExceeded) {
 		http.Error(writer, err.Error(), http.StatusPaymentRequired)
 		return
@@ -185,7 +184,7 @@ func (s *Server) handlerGetWithdrawals(writer http.ResponseWriter, request *http
 	}
 	demoUser := storage.User{Login: "admin", Password: "admin"}
 
-	withdrawalsList := s.Storage.GetWithdrawnList(demoUser)
+	withdrawalsList := s.Storage.GetWithdrawnList(request.Context(), demoUser)
 	if len(withdrawalsList) == 0 {
 		writer.WriteHeader(http.StatusNoContent)
 		return

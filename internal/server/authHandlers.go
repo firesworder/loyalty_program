@@ -57,7 +57,7 @@ func (s *Server) handlerRegisterUser(writer http.ResponseWriter, request *http.R
 	hash := md5.Sum([]byte(userPost.Password))
 	hashedPassword := hex.EncodeToString(hash[:])
 
-	user, err := s.Storage.AddUser(userPost.Login, hashedPassword)
+	user, err := s.Storage.AddUser(request.Context(), userPost.Login, hashedPassword)
 	if err != nil {
 		if errors.Is(err, storage.ErrLoginExist) {
 			http.Error(writer, err.Error(), http.StatusConflict)
@@ -81,7 +81,7 @@ func (s *Server) handlerLoginUser(writer http.ResponseWriter, request *http.Requ
 		return
 	}
 
-	user, err := s.Storage.GetUser(userPost.Login, userPost.Password)
+	user, err := s.Storage.GetUser(request.Context(), userPost.Login, userPost.Password)
 	if errors.Is(err, storage.ErrAuthDataIncorrect) {
 		http.Error(writer, err.Error(), http.StatusUnauthorized)
 		return

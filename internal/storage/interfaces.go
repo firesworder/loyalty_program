@@ -1,17 +1,19 @@
 package storage
 
+import "context"
+
 type Storage interface {
-	AddUser(login, password string) (*User, error)
-	GetUser(login, password string) (*User, error)
+	AddUser(ctx context.Context, login, password string) (*User, error)
+	GetUser(ctx context.Context, login, password string) (*User, error)
 
-	GetBalance(user User) (*Balance, error)
-	UpdateBalance(newBalance Balance) error
-	GetOrderStatusList(user User) []OrderStatus
-	AddOrder(orderNumber string, user User) error
+	GetBalance(ctx context.Context, user User) (*Balance, error)
+	UpdateBalance(ctx context.Context, newBalance Balance) error
+	GetOrderStatusList(ctx context.Context, user User) []OrderStatus
+	AddOrder(ctx context.Context, orderNumber string, user User) error
 
-	UpdateOrderStatuses(orderStatusList []OrderStatus) error
-	GetOrdersWithTemporaryStatus() ([]OrderStatus, error)
+	UpdateOrderStatuses(ctx context.Context, orderStatusList []OrderStatus) error
+	GetOrdersWithTemporaryStatus(ctx context.Context) ([]OrderStatus, error)
 
-	AddWithdrawn(orderNumber string, amount int64, user User) error
-	GetWithdrawnList(user User) []Withdrawn
+	AddWithdrawn(ctx context.Context, orderNumber string, amount int64, user User) error
+	GetWithdrawnList(ctx context.Context, user User) []Withdrawn
 }
