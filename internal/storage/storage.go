@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"log"
 	"time"
 )
 
@@ -103,6 +104,10 @@ func (db *SQLStorage) GetOrderStatusList(ctx context.Context, user User) []Order
 		}
 
 		result = append(result, oS)
+	}
+	if err = rows.Err(); err != nil {
+		log.Println(err)
+		return nil
 	}
 	return result
 }
@@ -208,6 +213,10 @@ func (db *SQLStorage) GetWithdrawnList(ctx context.Context, user User) []Withdra
 
 		result = append(result, w)
 	}
+	if err = rows.Err(); err != nil {
+		log.Println(err)
+		return nil
+	}
 	return result
 }
 
@@ -226,6 +235,9 @@ func (db *SQLStorage) GetOrdersWithTemporaryStatus(ctx context.Context) ([]Order
 			return nil, err
 		}
 		result = append(result, oS)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, err
 	}
 	return result, nil
 }
