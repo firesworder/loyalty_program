@@ -2,7 +2,7 @@ package server
 
 import (
 	"github.com/firesworder/loyalty_program/internal/storage"
-	"github.com/firesworder/loyalty_program/internal/testingHelper"
+	"github.com/firesworder/loyalty_program/internal/testinghelper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/http"
@@ -33,18 +33,18 @@ func Test_checkReqAuthData(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		req      testingHelper.RequestArgs
-		wantResp testingHelper.Response
+		req      testinghelper.RequestArgs
+		wantResp testinghelper.Response
 		wantUser *postArgsUser
 	}{
 		{
 			name: "Test 1. Correct auth request data",
-			req: testingHelper.RequestArgs{
+			req: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
 				ContentType: "application/json",
 				Content:     `{"login": "admin", "password": "admin"}`,
 			},
-			wantResp: testingHelper.Response{
+			wantResp: testinghelper.Response{
 				StatusCode:  http.StatusOK,
 				ContentType: "",
 				Content:     "",
@@ -54,12 +54,12 @@ func Test_checkReqAuthData(t *testing.T) {
 		},
 		{
 			name: "Test 2. Empty or not set login",
-			req: testingHelper.RequestArgs{
+			req: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
 				ContentType: "application/json",
 				Content:     `{"password": "admin"}`,
 			},
-			wantResp: testingHelper.Response{
+			wantResp: testinghelper.Response{
 				StatusCode:  http.StatusBadRequest,
 				ContentType: "text/plain; charset=utf-8",
 				Content:     "login and passwords fields can not be empty\n",
@@ -69,12 +69,12 @@ func Test_checkReqAuthData(t *testing.T) {
 		},
 		{
 			name: "Test 3. Empty or not set password",
-			req: testingHelper.RequestArgs{
+			req: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
 				ContentType: "application/json",
 				Content:     `{"login": "admin", "password": ""}`,
 			},
-			wantResp: testingHelper.Response{
+			wantResp: testinghelper.Response{
 				StatusCode:  http.StatusBadRequest,
 				ContentType: "text/plain; charset=utf-8",
 				Content:     "login and passwords fields can not be empty\n",
@@ -84,12 +84,12 @@ func Test_checkReqAuthData(t *testing.T) {
 		},
 		{
 			name: "Test 4. Empty login and password",
-			req: testingHelper.RequestArgs{
+			req: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
 				ContentType: "application/json",
 				Content:     `{"login": "", "password": ""}`,
 			},
-			wantResp: testingHelper.Response{
+			wantResp: testinghelper.Response{
 				StatusCode:  http.StatusBadRequest,
 				ContentType: "text/plain; charset=utf-8",
 				Content:     "login and passwords fields can not be empty\n",
@@ -101,7 +101,7 @@ func Test_checkReqAuthData(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			gotUser = &postArgsUser{}
-			gotResp := testingHelper.SendTestRequest(t, ts, tt.req)
+			gotResp := testinghelper.SendTestRequest(t, ts, tt.req)
 			assert.Equal(t, tt.wantResp, gotResp)
 			assert.Equal(t, tt.wantUser, gotUser)
 		})
@@ -115,7 +115,7 @@ func Test_setAuthTokenCookie(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	resp := testingHelper.SendTestRequest(t, ts, testingHelper.RequestArgs{})
+	resp := testinghelper.SendTestRequest(t, ts, testinghelper.RequestArgs{})
 
 	gotC := getCookie(resp.Cookies, cookieName)
 	require.NotNil(t, gotC)
@@ -129,19 +129,19 @@ func TestServer_handlerLoginUser(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		reqArgs      testingHelper.RequestArgs
-		wantResponse testingHelper.Response
+		reqArgs      testinghelper.RequestArgs
+		wantResponse testinghelper.Response
 		wantCookie   bool
 	}{
 		{
 			name: "Test 1. Correct auth data.",
-			reqArgs: testingHelper.RequestArgs{
+			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
 				Url:         "/api/user/login",
 				ContentType: "application/json",
 				Content:     `{"login": "admin", "password": "admin"}`,
 			},
-			wantResponse: testingHelper.Response{
+			wantResponse: testinghelper.Response{
 				StatusCode:  http.StatusOK,
 				ContentType: "",
 				Content:     "",
@@ -150,13 +150,13 @@ func TestServer_handlerLoginUser(t *testing.T) {
 		},
 		{
 			name: "Test 2. Incorrect auth data. Incorrect password.",
-			reqArgs: testingHelper.RequestArgs{
+			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
 				Url:         "/api/user/login",
 				ContentType: "application/json",
 				Content:     `{"login": "admin", "password": "postgres"}`,
 			},
-			wantResponse: testingHelper.Response{
+			wantResponse: testinghelper.Response{
 				StatusCode:  http.StatusUnauthorized,
 				ContentType: "text/plain; charset=utf-8",
 				Content:     "login or password incorrect\n",
@@ -165,13 +165,13 @@ func TestServer_handlerLoginUser(t *testing.T) {
 		},
 		{
 			name: "Test 3. Incorrect auth data. User don't exist.",
-			reqArgs: testingHelper.RequestArgs{
+			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
 				Url:         "/api/user/login",
 				ContentType: "application/json",
 				Content:     `{"login": "randomLogin", "password": "postgres"}`,
 			},
-			wantResponse: testingHelper.Response{
+			wantResponse: testinghelper.Response{
 				StatusCode:  http.StatusUnauthorized,
 				ContentType: "text/plain; charset=utf-8",
 				Content:     "login or password incorrect\n",
@@ -180,13 +180,13 @@ func TestServer_handlerLoginUser(t *testing.T) {
 		},
 		{
 			name: "Test 4. Incorrect http method",
-			reqArgs: testingHelper.RequestArgs{
+			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPut,
 				Url:         "/api/user/login",
 				ContentType: "application/json",
 				Content:     `{"login": "randomLogin", "password": "postgres"}`,
 			},
-			wantResponse: testingHelper.Response{
+			wantResponse: testinghelper.Response{
 				StatusCode:  http.StatusMethodNotAllowed,
 				ContentType: "",
 				Content:     "",
@@ -195,13 +195,13 @@ func TestServer_handlerLoginUser(t *testing.T) {
 		},
 		{
 			name: "Test 5. Incorrect request body. Not set password field.",
-			reqArgs: testingHelper.RequestArgs{
+			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
 				Url:         "/api/user/login",
 				ContentType: "application/json",
 				Content:     `{"login": "admin"}`,
 			},
-			wantResponse: testingHelper.Response{
+			wantResponse: testinghelper.Response{
 				StatusCode:  http.StatusBadRequest,
 				ContentType: "text/plain; charset=utf-8",
 				Content:     "login and passwords fields can not be empty\n",
@@ -211,7 +211,7 @@ func TestServer_handlerLoginUser(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotResp := testingHelper.SendTestRequest(t, ts, tt.reqArgs)
+			gotResp := testinghelper.SendTestRequest(t, ts, tt.reqArgs)
 			// проверяем куку
 			gotCookie := getCookie(gotResp.Cookies, TokenCookieName)
 			assert.Equal(t, tt.wantCookie, gotCookie != nil)
@@ -237,20 +237,20 @@ func TestServer_handlerRegisterUser(t *testing.T) {
 
 	tests := []struct {
 		name            string
-		reqArgs         testingHelper.RequestArgs
-		wantResponse    testingHelper.Response
+		reqArgs         testinghelper.RequestArgs
+		wantResponse    testinghelper.Response
 		wantCookie      bool
 		wantUserStorage []storage.User
 	}{
 		{
 			name: "Test 1. Correct reg data.",
-			reqArgs: testingHelper.RequestArgs{
+			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
 				Url:         "/api/user/register",
 				ContentType: "application/json",
 				Content:     `{"login": "mysql", "password": "mysql"}`,
 			},
-			wantResponse: testingHelper.Response{
+			wantResponse: testinghelper.Response{
 				StatusCode:  http.StatusOK,
 				ContentType: "",
 				Content:     "",
@@ -264,13 +264,13 @@ func TestServer_handlerRegisterUser(t *testing.T) {
 		},
 		{
 			name: "Test 2. Incorrect reg data. Login already exist.",
-			reqArgs: testingHelper.RequestArgs{
+			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
 				Url:         "/api/user/register",
 				ContentType: "application/json",
 				Content:     `{"login": "postgres", "password": "postgres"}`,
 			},
-			wantResponse: testingHelper.Response{
+			wantResponse: testinghelper.Response{
 				StatusCode:  http.StatusConflict,
 				ContentType: "text/plain; charset=utf-8",
 				Content:     "login already exist\n",
@@ -280,13 +280,13 @@ func TestServer_handlerRegisterUser(t *testing.T) {
 		},
 		{
 			name: "Test 3. Incorrect http method",
-			reqArgs: testingHelper.RequestArgs{
+			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPut,
 				Url:         "/api/user/register",
 				ContentType: "application/json",
 				Content:     `{"login": "randomLogin", "password": "postgres"}`,
 			},
-			wantResponse: testingHelper.Response{
+			wantResponse: testinghelper.Response{
 				StatusCode:  http.StatusMethodNotAllowed,
 				ContentType: "",
 				Content:     "",
@@ -296,13 +296,13 @@ func TestServer_handlerRegisterUser(t *testing.T) {
 		},
 		{
 			name: "Test 4. Incorrect request body. Not set password field.",
-			reqArgs: testingHelper.RequestArgs{
+			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
 				Url:         "/api/user/register",
 				ContentType: "application/json",
 				Content:     `{"login": "admin"}`,
 			},
-			wantResponse: testingHelper.Response{
+			wantResponse: testinghelper.Response{
 				StatusCode:  http.StatusBadRequest,
 				ContentType: "text/plain; charset=utf-8",
 				Content:     "login and passwords fields can not be empty\n",
@@ -312,13 +312,13 @@ func TestServer_handlerRegisterUser(t *testing.T) {
 		},
 		{
 			name: "Test 5. Incorrect request body. Not set login field.",
-			reqArgs: testingHelper.RequestArgs{
+			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
 				Url:         "/api/user/register",
 				ContentType: "application/json",
 				Content:     `{"password": "admin"}`,
 			},
-			wantResponse: testingHelper.Response{
+			wantResponse: testinghelper.Response{
 				StatusCode:  http.StatusBadRequest,
 				ContentType: "text/plain; charset=utf-8",
 				Content:     "login and passwords fields can not be empty\n",
@@ -330,7 +330,7 @@ func TestServer_handlerRegisterUser(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotResp := testingHelper.SendTestRequest(t, ts, tt.reqArgs)
+			gotResp := testinghelper.SendTestRequest(t, ts, tt.reqArgs)
 			// проверяем куку
 			gotCookie := getCookie(gotResp.Cookies, TokenCookieName)
 			assert.Equal(t, tt.wantCookie, gotCookie != nil)
