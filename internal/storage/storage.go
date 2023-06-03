@@ -276,10 +276,24 @@ func (db *SQLStorage) UpdateOrderStatuses(ctx context.Context, orderStatusList [
 	}
 	defer tx.Rollback()
 
+	userBalanceUpdates := map[int64]int64{}
 	for _, oS := range orderStatusList {
+		if oS.Status == "PROCESSED" && oS.Amount != 0 {
+			userBalanceUpdates[oS.UserID] += oS.Amount
+		}
+
 		_, err = tx.ExecContext(ctx,
 			"UPDATE orders SET status = $1, amount = $2 WHERE order_id = $3",
 			oS.Status, oS.Amount, oS.Number)
+		if err != nil {
+			return err
+		}
+	}
+
+	for userID, bUpdates := range userBalanceUpdates {
+		_, err = tx.ExecContext(ctx,
+			"UPDATE balance SET balance = balance + $1 WHERE user_id = $2",
+			userID, bUpdates)
 		if err != nil {
 			return err
 		}
