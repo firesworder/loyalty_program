@@ -109,14 +109,14 @@ func (db *SQLStorage) GetOrderStatusList(ctx context.Context, user User) []Order
 
 func (db *SQLStorage) AddOrder(ctx context.Context, orderNumber string, user User) error {
 	// проверка существования заказа в orders
-	exOrderId, exUserId := "", int64(0)
+	exOrderID, exUserID := "", int64(0)
 	err := db.Connection.QueryRowContext(ctx,
-		"SELECT order_id, user_id FROM orders WHERE order_id = $1", orderNumber).Scan(&exOrderId, &exUserId)
+		"SELECT order_id, user_id FROM orders WHERE order_id = $1", orderNumber).Scan(&exOrderID, &exUserID)
 	if err != nil && err != sql.ErrNoRows {
 		return err
 	}
-	if exOrderId != "" {
-		if exUserId == user.ID {
+	if exOrderID != "" {
+		if exUserID == user.ID {
 			return ErrOrderRegByThatUser
 		} else {
 			return ErrOrderRegByOtherUser
