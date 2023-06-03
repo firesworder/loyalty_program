@@ -50,7 +50,7 @@ func checkOrderNumberByLuhn(orderNumber string) (err error) {
 }
 
 func (s *Server) getUserAuthData(writer http.ResponseWriter, request *http.Request) *storage.User {
-	token := request.Context().Value("token")
+	token := request.Context().Value(tokenKey("token"))
 	if token == nil {
 		http.Error(writer, "user not authorized", http.StatusUnauthorized)
 		return nil
