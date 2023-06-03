@@ -62,7 +62,25 @@ func (db *SQLStorage) AddUser(ctx context.Context, login, password string) (*Use
 	}
 
 	u := User{ID: id, Login: login, Password: password}
+	db.AddUserBalance(ctx, u)
 	return &u, nil
+}
+
+func (db *SQLStorage) AddUserBalance(ctx context.Context, user User) error {
+	result, err := db.Connection.ExecContext(ctx,
+		"INSERT INTO balance(balance, withdrawn, user_id) VALUES ($1, $2, $3)",
+		0, 0, user.ID)
+	if err != nil {
+		return err
+	}
+	rAff, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rAff != 0 {
+		return fmt.Errorf("unknown error was occured on create user balance")
+	}
+	return nil
 }
 
 func (db *SQLStorage) GetUser(ctx context.Context, login, password string) (*User, error) {
