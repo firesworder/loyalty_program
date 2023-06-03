@@ -22,38 +22,46 @@ func TestParseEnvArgs(t *testing.T) {
 			cmdStr:  "file.exe",
 			envVars: map[string]string{},
 			wantEnv: &Environment{
-				ServerAddress: "localhost:8080",
+				ServerAddress:        "",
+				DSN:                  "",
+				AccrualSystemAddress: "",
 			},
 		},
 		{
 			name:    "Test correct 2. Set cmd args and empty env vars.",
-			cmdStr:  "file.exe -a=cmd.site",
+			cmdStr:  "file.exe -a=cmd.site -d=dsn_cmd -r=accrual_cmd",
 			envVars: map[string]string{},
 			wantEnv: &Environment{
-				ServerAddress: "cmd.site",
+				ServerAddress:        "cmd.site",
+				DSN:                  "dsn_cmd",
+				AccrualSystemAddress: "accrual_cmd",
 			},
 		},
 		{
 			name:    "Test correct 3. Empty cmd args and set env vars.",
 			cmdStr:  "file.exe",
-			envVars: map[string]string{"ADDRESS": "env.site"},
+			envVars: map[string]string{"RUN_ADDRESS": "env.site", "DATABASE_URI": "dsn_env", "ACCRUAL_SYSTEM_ADDRESS": "accrual_env"},
 			wantEnv: &Environment{
-				ServerAddress: "env.site",
+				ServerAddress:        "env.site",
+				DSN:                  "dsn_env",
+				AccrualSystemAddress: "accrual_env",
 			},
 		},
 		{
 			name:    "Test correct 4. Set cmd args and set env vars.",
-			cmdStr:  "file.exe -a=cmd.site",
-			envVars: map[string]string{"ADDRESS": "env.site"},
+			cmdStr:  "file.exe -a=cmd.site -d=dsn_cmd -r=accrual_cmd",
+			envVars: map[string]string{"RUN_ADDRESS": "env.site", "ACCRUAL_SYSTEM_ADDRESS": "accrual_env"},
 			wantEnv: &Environment{
-				ServerAddress: "env.site",
+				ServerAddress:        "env.site",
+				DSN:                  "dsn_cmd",
+				AccrualSystemAddress: "accrual_env",
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// удаляю переменные окружения, если они были до этого установлены
-			for _, key := range [1]string{"ADDRESS"} {
+			for _, key := range [3]string{"RUN_ADDRESS", "DATABASE_URI", "ACCRUAL_SYSTEM_ADDRESS"} {
 				err := os.Unsetenv(key)
 				require.NoError(t, err)
 			}

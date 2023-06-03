@@ -20,8 +20,8 @@ func NewEnvironment() *Environment {
 
 func (e *Environment) InitCmdArgs() {
 	flag.StringVar(&e.ServerAddress, "a", "", "Server address")
-	flag.StringVar(&e.ServerAddress, "d", "", "Server address")
-	flag.StringVar(&e.ServerAddress, "r", "", "Server address")
+	flag.StringVar(&e.DSN, "d", "", "Server address")
+	flag.StringVar(&e.AccrualSystemAddress, "r", "", "Server address")
 }
 
 // ParseEnvArgs Парсит значения полей Env. Сначала из cmd аргументов, затем из перем-х окружения
