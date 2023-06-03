@@ -18,14 +18,14 @@ type OrderStatus struct {
 	Status     string    `json:"status"`
 	Amount     int64     `json:"accrual,omitempty"`
 	UploadedAt time.Time `json:"uploaded_at"`
-	UserId     int64     `json:"-"`
+	UserID     int64     `json:"-"`
 }
 
 type Withdrawn struct {
 	OrderID     string    `json:"order"`
 	Amount      int64     `json:"sum"`
 	ProcessedAt time.Time `json:"processed_at"`
-	UserId      int64     `json:"-"`
+	UserID      int64     `json:"-"`
 }
 
 type Balance struct {

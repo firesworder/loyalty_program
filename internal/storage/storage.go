@@ -98,7 +98,7 @@ func (db *SQLStorage) GetOrderStatusList(ctx context.Context, user User) []Order
 	var oS OrderStatus
 	for rows.Next() {
 		oS = OrderStatus{}
-		err = rows.Scan(&oS.Number, &oS.Status, &oS.Amount, &oS.UploadedAt, &oS.UserId)
+		err = rows.Scan(&oS.Number, &oS.Status, &oS.Amount, &oS.UploadedAt, &oS.UserID)
 		if err != nil {
 			return nil
 		}
@@ -206,7 +206,7 @@ func (db *SQLStorage) GetWithdrawnList(ctx context.Context, user User) []Withdra
 	var w Withdrawn
 	for rows.Next() {
 		w = Withdrawn{}
-		err = rows.Scan(&w.OrderID, &w.Amount, &w.ProcessedAt, &w.UserId)
+		err = rows.Scan(&w.OrderID, &w.Amount, &w.ProcessedAt, &w.UserID)
 		if err != nil {
 			return nil
 		}
@@ -230,7 +230,7 @@ func (db *SQLStorage) GetOrdersWithTemporaryStatus(ctx context.Context) ([]Order
 	}
 	for rows.Next() {
 		oS := OrderStatus{}
-		err := rows.Scan(&oS.Number, &oS.Status, &oS.Amount, &oS.UploadedAt, &oS.UserId)
+		err := rows.Scan(&oS.Number, &oS.Status, &oS.Amount, &oS.UploadedAt, &oS.UserID)
 		if err != nil {
 			return nil, err
 		}

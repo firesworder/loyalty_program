@@ -21,37 +21,37 @@ var MockOrderStatusData = []OrderStatus{
 		Status:     "PROCESSED",
 		Amount:     100,
 		UploadedAt: time.Date(2022, 12, 10, 12, 0, 0, 0, time.Local),
-		UserId:     0,
+		UserID:     0,
 	},
 	{
 		Number:     "order2",
 		Status:     "PROCESSING",
 		UploadedAt: time.Date(2023, 01, 10, 12, 0, 0, 0, time.Local),
-		UserId:     1,
+		UserID:     1,
 	},
 	{
 		Number:     "order3",
 		Status:     "INVALID",
 		UploadedAt: time.Date(2023, 02, 10, 12, 0, 0, 0, time.Local),
-		UserId:     0,
+		UserID:     0,
 	},
 	{
 		Number:     "order4",
 		Status:     "NEW",
 		UploadedAt: time.Date(2023, 03, 10, 12, 0, 0, 0, time.Local),
-		UserId:     1,
+		UserID:     1,
 	},
 	{
 		Number:     "9359943520",
 		Status:     "NEW",
 		UploadedAt: time.Date(2023, 03, 10, 12, 0, 0, 0, time.Local),
-		UserId:     0,
+		UserID:     0,
 	},
 	{
 		Number:     "328257446760",
 		Status:     "INVALID",
 		UploadedAt: time.Date(2023, 03, 10, 12, 0, 0, 0, time.Local),
-		UserId:     1,
+		UserID:     1,
 	},
 }
 
@@ -60,13 +60,13 @@ var MockWithdrawnData = []Withdrawn{
 		OrderID:     "order6",
 		Amount:      100,
 		ProcessedAt: time.Date(2023, 04, 02, 12, 0, 0, 0, time.Local),
-		UserId:      0,
+		UserID:      0,
 	},
 	{
 		OrderID:     "order7",
 		Amount:      200,
 		ProcessedAt: time.Date(2023, 05, 02, 12, 0, 0, 0, time.Local),
-		UserId:      1,
+		UserID:      1,
 	},
 }
 
@@ -146,7 +146,7 @@ func (m *Mock) UpdateBalance(ctx context.Context, newBalance Balance) error {
 func (m *Mock) GetWithdrawnList(ctx context.Context, user User) []Withdrawn {
 	result := make([]Withdrawn, 0)
 	for _, mW := range m.Withdrawn {
-		if mW.UserId == user.ID {
+		if mW.UserID == user.ID {
 			result = append(result, mW)
 		}
 	}
@@ -156,7 +156,7 @@ func (m *Mock) GetWithdrawnList(ctx context.Context, user User) []Withdrawn {
 func (m *Mock) GetOrderStatusList(ctx context.Context, user User) []OrderStatus {
 	result := make([]OrderStatus, 0)
 	for _, mOS := range m.OrderStatus {
-		if mOS.UserId == user.ID {
+		if mOS.UserID == user.ID {
 			result = append(result, mOS)
 		}
 	}
@@ -166,7 +166,7 @@ func (m *Mock) GetOrderStatusList(ctx context.Context, user User) []OrderStatus 
 func (m *Mock) AddOrder(ctx context.Context, orderNumber string, user User) error {
 	for _, order := range m.OrderStatus {
 		if order.Number == orderNumber {
-			if order.UserId == user.ID {
+			if order.UserID == user.ID {
 				return ErrOrderRegByThatUser
 			} else {
 				return ErrOrderRegByOtherUser
@@ -178,7 +178,7 @@ func (m *Mock) AddOrder(ctx context.Context, orderNumber string, user User) erro
 		Number:     orderNumber,
 		Status:     "NEW",
 		UploadedAt: time.Now(),
-		UserId:     user.ID,
+		UserID:     user.ID,
 	}
 	m.OrderStatus = append(m.OrderStatus, order)
 	return nil
@@ -198,7 +198,7 @@ func (m *Mock) AddWithdrawn(ctx context.Context, orderNumber string, amount int6
 		OrderID:     orderNumber,
 		Amount:      amount,
 		ProcessedAt: time.Now(),
-		UserId:      user.ID,
+		UserID:      user.ID,
 	}
 	m.Withdrawn = append(m.Withdrawn, w)
 	newBalance := Balance{

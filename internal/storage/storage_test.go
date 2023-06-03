@@ -215,12 +215,12 @@ func TestSQLStorage_GetOrderStatusList(t *testing.T) {
 	defer tx.Rollback()
 
 	demo := demoOrderStatuses
-	demo[0].UserId, demo[2].UserId = userID1, userID1
-	demo[1].UserId, demo[3].UserId = userID2, userID2
+	demo[0].UserID, demo[2].UserID = userID1, userID1
+	demo[1].UserID, demo[3].UserID = userID2, userID2
 	for _, oS := range demo {
 		_, err = tx.ExecContext(context.Background(),
 			"INSERT INTO orders(order_id, status, amount, uploaded_at, user_id) VALUES ($1, $2, $3, $4, $5)",
-			oS.Number, oS.Status, oS.Amount, oS.UploadedAt, oS.UserId)
+			oS.Number, oS.Status, oS.Amount, oS.UploadedAt, oS.UserID)
 		require.NoError(t, err)
 	}
 	err = tx.Commit()
@@ -286,12 +286,12 @@ func TestSQLStorage_AddOrder(t *testing.T) {
 	defer tx.Rollback()
 
 	demo := demoOrderStatuses
-	demo[0].UserId, demo[2].UserId = userID1, userID1
-	demo[1].UserId, demo[3].UserId = userID2, userID2
+	demo[0].UserID, demo[2].UserID = userID1, userID1
+	demo[1].UserID, demo[3].UserID = userID2, userID2
 	for _, oS := range demo {
 		_, err = tx.ExecContext(context.Background(),
 			"INSERT INTO orders(order_id, status, amount, uploaded_at, user_id) VALUES ($1, $2, $3, $4, $5)",
-			oS.Number, oS.Status, oS.Amount, oS.UploadedAt, oS.UserId)
+			oS.Number, oS.Status, oS.Amount, oS.UploadedAt, oS.UserID)
 		require.NoError(t, err)
 	}
 	err = tx.Commit()
@@ -382,26 +382,26 @@ func TestSQLStorage_GetWithdrawnList(t *testing.T) {
 			OrderID:     "624605372751",
 			Amount:      300,
 			ProcessedAt: time.Date(2023, 03, 10, 12, 0, 0, 0, time.Local),
-			UserId:      userID1,
+			UserID:      userID1,
 		},
 		{
 			OrderID:     "000971335161",
 			Amount:      50,
 			ProcessedAt: time.Date(2023, 02, 10, 12, 0, 0, 0, time.Local),
-			UserId:      userID2,
+			UserID:      userID2,
 		},
 		{
 			OrderID:     "9359943520",
 			Amount:      125,
 			ProcessedAt: time.Date(2023, 01, 10, 12, 0, 0, 0, time.Local),
-			UserId:      userID1,
+			UserID:      userID1,
 		},
 	}
 
 	for _, w := range demoWithdrawn {
 		_, err = db.Connection.ExecContext(context.Background(),
 			"INSERT INTO withdrawn(order_id, amount, uploaded_at, user_id) VALUES ($1, $2, $3, $4)",
-			w.OrderID, w.Amount, w.ProcessedAt, w.UserId)
+			w.OrderID, w.Amount, w.ProcessedAt, w.UserID)
 		require.NoError(t, err)
 	}
 	err = tx.Commit()
@@ -540,12 +540,12 @@ func TestSQLStorage_GetOrdersWithTemporaryStatus(t *testing.T) {
 	defer tx.Rollback()
 
 	demo := demoOrderStatuses
-	demo[0].UserId, demo[2].UserId = userID1, userID1
-	demo[1].UserId, demo[3].UserId = userID2, userID2
+	demo[0].UserID, demo[2].UserID = userID1, userID1
+	demo[1].UserID, demo[3].UserID = userID2, userID2
 	for _, oS := range demo {
 		_, err = tx.ExecContext(context.Background(),
 			"INSERT INTO orders(order_id, status, amount, uploaded_at, user_id) VALUES ($1, $2, $3, $4, $5)",
-			oS.Number, oS.Status, oS.Amount, oS.UploadedAt, oS.UserId)
+			oS.Number, oS.Status, oS.Amount, oS.UploadedAt, oS.UserID)
 		require.NoError(t, err)
 	}
 	err = tx.Commit()
@@ -712,12 +712,12 @@ func TestSQLStorage_UpdateOrderStatuses(t *testing.T) {
 	defer tx.Rollback()
 
 	demo := demoOrderStatuses
-	demo[0].UserId, demo[2].UserId = userID1, userID1
-	demo[1].UserId, demo[3].UserId = userID2, userID2
+	demo[0].UserID, demo[2].UserID = userID1, userID1
+	demo[1].UserID, demo[3].UserID = userID2, userID2
 	for _, oS := range demo {
 		_, err = tx.ExecContext(context.Background(),
 			"INSERT INTO orders(order_id, status, amount, uploaded_at, user_id) VALUES ($1, $2, $3, $4, $5)",
-			oS.Number, oS.Status, oS.Amount, oS.UploadedAt, oS.UserId)
+			oS.Number, oS.Status, oS.Amount, oS.UploadedAt, oS.UserID)
 		require.NoError(t, err)
 	}
 	err = tx.Commit()
@@ -745,13 +745,15 @@ func TestSQLStorage_UpdateOrderStatuses(t *testing.T) {
 	var oS OrderStatus
 	for rows.Next() {
 		oS = OrderStatus{}
-		err = rows.Scan(&oS.Number, &oS.Status, &oS.Amount, &oS.UploadedAt, &oS.UserId)
+		err = rows.Scan(&oS.Number, &oS.Status, &oS.Amount, &oS.UploadedAt, &oS.UserID)
 		require.NoError(t, err)
 
 		curOS = append(curOS, oS)
 	}
+	err = rows.Err()
+	require.NoError(t, err)
 
 	assert.Equal(t, wantOS, curOS)
 
-	//undoTestChanges(t, db.Connection)
+	undoTestChanges(t, db.Connection)
 }
