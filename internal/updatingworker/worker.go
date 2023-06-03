@@ -88,10 +88,10 @@ func (w *Worker) sendOrderStatusRequest(orderNumber string) (rB responseBody, er
 	}
 
 	response, err := http.DefaultClient.Do(request)
-	defer response.Body.Close()
 	if err != nil {
 		return
 	}
+	defer response.Body.Close()
 
 	if response.StatusCode == http.StatusTooManyRequests {
 		return rB, ErrReqLimitExceeded
