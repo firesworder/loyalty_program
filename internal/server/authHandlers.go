@@ -81,7 +81,11 @@ func (s *Server) handlerLoginUser(writer http.ResponseWriter, request *http.Requ
 		return
 	}
 
-	user, err := s.Storage.GetUser(request.Context(), userPost.Login, userPost.Password)
+	// хеш пароля
+	hash := md5.Sum([]byte(userPost.Password))
+	hashedPassword := hex.EncodeToString(hash[:])
+
+	user, err := s.Storage.GetUser(request.Context(), userPost.Login, hashedPassword)
 	if errors.Is(err, storage.ErrAuthDataIncorrect) {
 		http.Error(writer, err.Error(), http.StatusUnauthorized)
 		return
