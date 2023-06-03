@@ -137,7 +137,7 @@ func TestServer_handlerLoginUser(t *testing.T) {
 			name: "Test 1. Correct auth data.",
 			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
-				Url:         "/api/user/login",
+				URL:         "/api/user/login",
 				ContentType: "application/json",
 				Content:     `{"login": "admin", "password": "admin"}`,
 			},
@@ -152,7 +152,7 @@ func TestServer_handlerLoginUser(t *testing.T) {
 			name: "Test 2. Incorrect auth data. Incorrect password.",
 			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
-				Url:         "/api/user/login",
+				URL:         "/api/user/login",
 				ContentType: "application/json",
 				Content:     `{"login": "admin", "password": "postgres"}`,
 			},
@@ -167,7 +167,7 @@ func TestServer_handlerLoginUser(t *testing.T) {
 			name: "Test 3. Incorrect auth data. User don't exist.",
 			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
-				Url:         "/api/user/login",
+				URL:         "/api/user/login",
 				ContentType: "application/json",
 				Content:     `{"login": "randomLogin", "password": "postgres"}`,
 			},
@@ -182,7 +182,7 @@ func TestServer_handlerLoginUser(t *testing.T) {
 			name: "Test 4. Incorrect http method",
 			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPut,
-				Url:         "/api/user/login",
+				URL:         "/api/user/login",
 				ContentType: "application/json",
 				Content:     `{"login": "randomLogin", "password": "postgres"}`,
 			},
@@ -197,7 +197,7 @@ func TestServer_handlerLoginUser(t *testing.T) {
 			name: "Test 5. Incorrect request body. Not set password field.",
 			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
-				Url:         "/api/user/login",
+				URL:         "/api/user/login",
 				ContentType: "application/json",
 				Content:     `{"login": "admin"}`,
 			},
@@ -246,7 +246,7 @@ func TestServer_handlerRegisterUser(t *testing.T) {
 			name: "Test 1. Correct reg data.",
 			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
-				Url:         "/api/user/register",
+				URL:         "/api/user/register",
 				ContentType: "application/json",
 				Content:     `{"login": "mysql", "password": "mysql"}`,
 			},
@@ -266,7 +266,7 @@ func TestServer_handlerRegisterUser(t *testing.T) {
 			name: "Test 2. Incorrect reg data. Login already exist.",
 			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
-				Url:         "/api/user/register",
+				URL:         "/api/user/register",
 				ContentType: "application/json",
 				Content:     `{"login": "postgres", "password": "postgres"}`,
 			},
@@ -282,7 +282,7 @@ func TestServer_handlerRegisterUser(t *testing.T) {
 			name: "Test 3. Incorrect http method",
 			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPut,
-				Url:         "/api/user/register",
+				URL:         "/api/user/register",
 				ContentType: "application/json",
 				Content:     `{"login": "randomLogin", "password": "postgres"}`,
 			},
@@ -298,7 +298,7 @@ func TestServer_handlerRegisterUser(t *testing.T) {
 			name: "Test 4. Incorrect request body. Not set password field.",
 			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
-				Url:         "/api/user/register",
+				URL:         "/api/user/register",
 				ContentType: "application/json",
 				Content:     `{"login": "admin"}`,
 			},
@@ -314,7 +314,7 @@ func TestServer_handlerRegisterUser(t *testing.T) {
 			name: "Test 5. Incorrect request body. Not set login field.",
 			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
-				Url:         "/api/user/register",
+				URL:         "/api/user/register",
 				ContentType: "application/json",
 				Content:     `{"password": "admin"}`,
 			},

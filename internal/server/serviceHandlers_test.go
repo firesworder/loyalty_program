@@ -58,7 +58,7 @@ func TestServer_handlerRegisterOrderNumber(t *testing.T) {
 			name: "Test 1. Correct request.",
 			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
-				Url:         "/api/user/orders",
+				URL:         "/api/user/orders",
 				ContentType: ContentTypeJson,
 				Content:     "4561261212345467",
 				Cookie:      &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
@@ -71,7 +71,7 @@ func TestServer_handlerRegisterOrderNumber(t *testing.T) {
 			name: "Test 2. Order already registered by that user.",
 			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
-				Url:         "/api/user/orders",
+				URL:         "/api/user/orders",
 				ContentType: ContentTypeJson,
 				Content:     "9359943520",
 				Cookie:      &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
@@ -84,7 +84,7 @@ func TestServer_handlerRegisterOrderNumber(t *testing.T) {
 			name: "Test 3. Incorrect request. Empty body.",
 			reqArgs: testinghelper.RequestArgs{
 				Method: http.MethodPost,
-				Url:    "/api/user/orders",
+				URL:    "/api/user/orders",
 				Cookie: &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
 			},
 			wantResponse: testinghelper.Response{
@@ -98,7 +98,7 @@ func TestServer_handlerRegisterOrderNumber(t *testing.T) {
 			name: "Test 4. Order has been registered already by another user.",
 			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
-				Url:         "/api/user/orders",
+				URL:         "/api/user/orders",
 				ContentType: ContentTypeJson,
 				Content:     "328257446760",
 				Cookie:      &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
@@ -114,7 +114,7 @@ func TestServer_handlerRegisterOrderNumber(t *testing.T) {
 			name: "Test 5. Incorrect order number.",
 			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
-				Url:         "/api/user/orders",
+				URL:         "/api/user/orders",
 				ContentType: ContentTypeJson,
 				Content:     "328257446767",
 				Cookie:      &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
@@ -153,7 +153,7 @@ func TestServer_handlerGetOrderStatusList(t *testing.T) {
 			name: "Test 1. Correct request.",
 			reqArgs: testinghelper.RequestArgs{
 				Method: http.MethodGet,
-				Url:    "/api/user/orders",
+				URL:    "/api/user/orders",
 				Cookie: &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
 			},
 			wantResponse: testinghelper.Response{
@@ -191,7 +191,7 @@ func TestServer_handlerGetBalance(t *testing.T) {
 			name: "Test 1. Correct request.",
 			reqArgs: testinghelper.RequestArgs{
 				Method: http.MethodGet,
-				Url:    "/api/user/balance",
+				URL:    "/api/user/balance",
 				Cookie: &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
 			},
 			wantResponse: testinghelper.Response{
@@ -228,7 +228,7 @@ func TestServer_handlerWithdrawBonuses(t *testing.T) {
 			name: "Test 1. Correct request.",
 			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
-				Url:         "/api/user/balance/withdraw",
+				URL:         "/api/user/balance/withdraw",
 				ContentType: ContentTypeJson,
 				Content:     `{"order": "456951314651", "sum": 100}`,
 				Cookie:      &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
@@ -241,7 +241,7 @@ func TestServer_handlerWithdrawBonuses(t *testing.T) {
 			name: "Test 2. Balance exceeded.",
 			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
-				Url:         "/api/user/balance/withdraw",
+				URL:         "/api/user/balance/withdraw",
 				ContentType: ContentTypeJson,
 				Content:     `{"order": "456951314651", "sum": 1000}`,
 				Cookie:      &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
@@ -256,7 +256,7 @@ func TestServer_handlerWithdrawBonuses(t *testing.T) {
 			name: "Test 3. Incorrect request. Empty body.",
 			reqArgs: testinghelper.RequestArgs{
 				Method: http.MethodPost,
-				Url:    "/api/user/balance/withdraw",
+				URL:    "/api/user/balance/withdraw",
 				Cookie: &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
 			},
 			wantResponse: testinghelper.Response{
@@ -270,7 +270,7 @@ func TestServer_handlerWithdrawBonuses(t *testing.T) {
 			name: "Test 4. Incorrect order number.",
 			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
-				Url:         "/api/user/balance/withdraw",
+				URL:         "/api/user/balance/withdraw",
 				ContentType: ContentTypeJson,
 				Content:     `{"order": "456951314655", "sum": 100}`,
 				Cookie:      &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
@@ -309,7 +309,7 @@ func TestServer_handlerGetWithdrawals(t *testing.T) {
 			name: "Test 1. Correct request.",
 			reqArgs: testinghelper.RequestArgs{
 				Method: http.MethodGet,
-				Url:    "/api/user/withdrawals",
+				URL:    "/api/user/withdrawals",
 				Cookie: &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
 			},
 			wantResponse: testinghelper.Response{

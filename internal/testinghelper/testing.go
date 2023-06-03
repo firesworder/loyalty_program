@@ -11,7 +11,7 @@ import (
 
 type RequestArgs struct {
 	Method      string
-	Url         string
+	URL         string
 	ContentType string
 	Content     string
 	Cookie      *http.Cookie
@@ -26,7 +26,7 @@ type Response struct {
 
 func SendTestRequest(t *testing.T, ts *httptest.Server, args RequestArgs) Response {
 	// создаю запрос и устанавливаю contentType
-	request, err := http.NewRequest(args.Method, ts.URL+args.Url, strings.NewReader(args.Content))
+	request, err := http.NewRequest(args.Method, ts.URL+args.URL, strings.NewReader(args.Content))
 	request.Header.Set("Content-Type", args.ContentType)
 	require.NoError(t, err)
 
