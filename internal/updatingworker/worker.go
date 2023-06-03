@@ -1,4 +1,4 @@
-package updatingWorker
+package updatingworker
 
 import (
 	"context"
@@ -16,13 +16,13 @@ var ErrOrderNotFound = errors.New("order number was not found")
 type Worker struct {
 	Storage           storage.Storage
 	ReqPerMinuteLimit int64
-	ApiCalcAddress    string
+	APICalcAddress    string
 	TickerDuration    time.Duration
 	done              chan struct{}
 }
 
 func NewWorker(storage storage.Storage, tickerDuration time.Duration, apiCalcAddr string) *Worker {
-	w := &Worker{Storage: storage, ApiCalcAddress: apiCalcAddr, TickerDuration: tickerDuration}
+	w := &Worker{Storage: storage, APICalcAddress: apiCalcAddr, TickerDuration: tickerDuration}
 	w.done = make(chan struct{})
 	return w
 }
@@ -82,12 +82,13 @@ type responseBody struct {
 
 func (w *Worker) sendOrderStatusRequest(orderNumber string) (rB responseBody, err error) {
 	url := "/api/orders/" + orderNumber
-	request, err := http.NewRequest(http.MethodGet, w.ApiCalcAddress+url, nil)
+	request, err := http.NewRequest(http.MethodGet, w.APICalcAddress+url, nil)
 	if err != nil {
 		return
 	}
 
 	response, err := http.DefaultClient.Do(request)
+	defer response.Body.Close()
 	if err != nil {
 		return
 	}

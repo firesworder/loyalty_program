@@ -1,4 +1,4 @@
-package updatingWorker
+package updatingworker
 
 import (
 	"encoding/json"
