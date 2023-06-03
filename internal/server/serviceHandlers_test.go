@@ -59,7 +59,7 @@ func TestServer_handlerRegisterOrderNumber(t *testing.T) {
 			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
 				URL:         "/api/user/orders",
-				ContentType: ContentTypeJson,
+				ContentType: ContentTypeJSON,
 				Content:     "4561261212345467",
 				Cookie:      &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
 			},
@@ -72,7 +72,7 @@ func TestServer_handlerRegisterOrderNumber(t *testing.T) {
 			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
 				URL:         "/api/user/orders",
-				ContentType: ContentTypeJson,
+				ContentType: ContentTypeJSON,
 				Content:     "9359943520",
 				Cookie:      &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
 			},
@@ -99,7 +99,7 @@ func TestServer_handlerRegisterOrderNumber(t *testing.T) {
 			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
 				URL:         "/api/user/orders",
-				ContentType: ContentTypeJson,
+				ContentType: ContentTypeJSON,
 				Content:     "328257446760",
 				Cookie:      &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
 			},
@@ -115,7 +115,7 @@ func TestServer_handlerRegisterOrderNumber(t *testing.T) {
 			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
 				URL:         "/api/user/orders",
-				ContentType: ContentTypeJson,
+				ContentType: ContentTypeJSON,
 				Content:     "328257446767",
 				Cookie:      &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
 			},
@@ -158,7 +158,7 @@ func TestServer_handlerGetOrderStatusList(t *testing.T) {
 			},
 			wantResponse: testinghelper.Response{
 				StatusCode:  http.StatusOK,
-				ContentType: ContentTypeJson,
+				ContentType: ContentTypeJSON,
 				Content: `[{"number":"order1","status":"PROCESSED","accrual":100,"uploaded_at":"2022-12-10T12:00:00+04:00"},` +
 					`{"number":"order3","status":"INVALID","uploaded_at":"2023-02-10T12:00:00+04:00"},` +
 					`{"number":"9359943520","status":"NEW","uploaded_at":"2023-03-10T12:00:00+04:00"}]`,
@@ -196,7 +196,7 @@ func TestServer_handlerGetBalance(t *testing.T) {
 			},
 			wantResponse: testinghelper.Response{
 				StatusCode:  http.StatusOK,
-				ContentType: ContentTypeJson,
+				ContentType: ContentTypeJSON,
 				Content:     `{"current":900,"withdrawn":15}`,
 				Cookies:     nil,
 			},
@@ -229,7 +229,7 @@ func TestServer_handlerWithdrawBonuses(t *testing.T) {
 			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
 				URL:         "/api/user/balance/withdraw",
-				ContentType: ContentTypeJson,
+				ContentType: ContentTypeJSON,
 				Content:     `{"order": "456951314651", "sum": 100}`,
 				Cookie:      &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
 			},
@@ -242,7 +242,7 @@ func TestServer_handlerWithdrawBonuses(t *testing.T) {
 			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
 				URL:         "/api/user/balance/withdraw",
-				ContentType: ContentTypeJson,
+				ContentType: ContentTypeJSON,
 				Content:     `{"order": "456951314651", "sum": 1000}`,
 				Cookie:      &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
 			},
@@ -271,7 +271,7 @@ func TestServer_handlerWithdrawBonuses(t *testing.T) {
 			reqArgs: testinghelper.RequestArgs{
 				Method:      http.MethodPost,
 				URL:         "/api/user/balance/withdraw",
-				ContentType: ContentTypeJson,
+				ContentType: ContentTypeJSON,
 				Content:     `{"order": "456951314655", "sum": 100}`,
 				Cookie:      &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
 			},
@@ -314,7 +314,7 @@ func TestServer_handlerGetWithdrawals(t *testing.T) {
 			},
 			wantResponse: testinghelper.Response{
 				StatusCode:  http.StatusOK,
-				ContentType: ContentTypeJson,
+				ContentType: ContentTypeJSON,
 				Content:     `[{"order":"order6","sum":100,"processed_at":"2023-04-02T12:00:00+04:00"}]`,
 				Cookies:     nil,
 			},

@@ -111,13 +111,13 @@ func (s *Server) handlerGetOrderStatusList(writer http.ResponseWriter, request *
 	}
 
 	statusList := s.Storage.GetOrderStatusList(request.Context(), *user)
-	rJson, err := json.Marshal(statusList)
+	rJSON, err := json.Marshal(statusList)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 	}
 
-	writer.Header().Set("Content-Type", ContentTypeJson)
-	writer.Write(rJson)
+	writer.Header().Set("Content-Type", ContentTypeJSON)
+	writer.Write(rJSON)
 }
 
 // handlerGetBalance получение текущего баланса счёта баллов лояльности пользователя
@@ -138,13 +138,13 @@ func (s *Server) handlerGetBalance(writer http.ResponseWriter, request *http.Req
 		Withdrawn int64 `json:"withdrawn"`
 	}{Current: balance.BalanceAmount, Withdrawn: balance.WithdrawnAmount}
 
-	rJson, err := json.Marshal(r)
+	rJSON, err := json.Marshal(r)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	writer.Header().Set("Content-Type", ContentTypeJson)
-	writer.Write(rJson)
+	writer.Header().Set("Content-Type", ContentTypeJSON)
+	writer.Write(rJSON)
 }
 
 // handlerWithdrawBonuses запрос на списание баллов с накопительного счёта в счёт оплаты нового заказа
@@ -191,12 +191,12 @@ func (s *Server) handlerGetWithdrawals(writer http.ResponseWriter, request *http
 		return
 	}
 
-	rJson, err := json.Marshal(withdrawalsList)
+	rJSON, err := json.Marshal(withdrawalsList)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	writer.Header().Set("Content-Type", ContentTypeJson)
-	writer.Write(rJson)
+	writer.Header().Set("Content-Type", ContentTypeJSON)
+	writer.Write(rJSON)
 }

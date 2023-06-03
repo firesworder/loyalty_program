@@ -33,11 +33,11 @@ func getMockHandler(t *testing.T) http.HandlerFunc {
 				Amount: 500,
 			}
 
-			rJson, err := json.Marshal(r)
+			rJSON, err := json.Marshal(r)
 			require.NoError(t, err)
 
 			writer.WriteHeader(http.StatusOK)
-			writer.Write(rJson)
+			writer.Write(rJSON)
 		}
 	}
 }

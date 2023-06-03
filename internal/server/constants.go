@@ -1,3 +1,3 @@
 package server
 
-const ContentTypeJson = "application/json"
+const ContentTypeJSON = "application/json"
