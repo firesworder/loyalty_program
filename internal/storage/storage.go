@@ -87,7 +87,7 @@ func (db *SQLStorage) GetBalance(ctx context.Context, user User) (*Balance, erro
 	if err != nil {
 		return nil, err
 	}
-	return &Balance{UserId: uid, BalanceAmount: b, WithdrawnAmount: w}, nil
+	return &Balance{UserID: uid, BalanceAmount: b, WithdrawnAmount: w}, nil
 }
 
 func (db *SQLStorage) GetOrderStatusList(ctx context.Context, user User) []OrderStatus {
@@ -264,7 +264,7 @@ func (db *SQLStorage) UpdateOrderStatuses(ctx context.Context, orderStatusList [
 func (db *SQLStorage) UpdateBalance(ctx context.Context, newBalance Balance) error {
 	result, err := db.Connection.ExecContext(ctx,
 		"UPDATE balance SET balance = $1, withdrawn = $2 WHERE user_id = $3",
-		newBalance.BalanceAmount, newBalance.WithdrawnAmount, newBalance.UserId)
+		newBalance.BalanceAmount, newBalance.WithdrawnAmount, newBalance.UserID)
 	if err != nil {
 		return err
 	}

@@ -165,7 +165,7 @@ func TestSQLStorage_GetBalance(t *testing.T) {
 				Login:    "demoU",
 				Password: "demoU",
 			},
-			wantBalance: &Balance{UserId: userID, BalanceAmount: 250, WithdrawnAmount: 130},
+			wantBalance: &Balance{UserID: userID, BalanceAmount: 250, WithdrawnAmount: 130},
 			wantErr:     nil,
 		},
 		{
@@ -484,7 +484,7 @@ func TestSQLStorage_AddWithdrawn(t *testing.T) {
 					Password: "demoU",
 				},
 			},
-			wantBalance: &Balance{BalanceAmount: 800, WithdrawnAmount: 1000, UserId: userID},
+			wantBalance: &Balance{BalanceAmount: 800, WithdrawnAmount: 1000, UserID: userID},
 			wantErr:     nil,
 		},
 		{
@@ -499,7 +499,7 @@ func TestSQLStorage_AddWithdrawn(t *testing.T) {
 				},
 			},
 			// влияет тест сверху! если запускать отдельно - цифры будут отличаться(1000 и 800)
-			wantBalance: &Balance{BalanceAmount: 800, WithdrawnAmount: 1000, UserId: userID},
+			wantBalance: &Balance{BalanceAmount: 800, WithdrawnAmount: 1000, UserID: userID},
 			wantErr:     ErrBalanceExceeded,
 		},
 	}
@@ -657,14 +657,14 @@ func TestSQLStorage_UpdateBalance(t *testing.T) {
 	}{
 		{
 			name:        "Test 1. Correct update balance",
-			argBalance:  Balance{UserId: userID, WithdrawnAmount: 150, BalanceAmount: 230},
-			wantBalance: &Balance{UserId: userID, WithdrawnAmount: 150, BalanceAmount: 230},
+			argBalance:  Balance{UserID: userID, WithdrawnAmount: 150, BalanceAmount: 230},
+			wantBalance: &Balance{UserID: userID, WithdrawnAmount: 150, BalanceAmount: 230},
 			wantErr:     nil,
 		},
 		{
 			name:        "Test 2. Incorrect update, user not found",
-			argBalance:  Balance{UserId: 31333, WithdrawnAmount: 300, BalanceAmount: 500},
-			wantBalance: &Balance{UserId: 0, BalanceAmount: 0, WithdrawnAmount: 0},
+			argBalance:  Balance{UserID: 31333, WithdrawnAmount: 300, BalanceAmount: 500},
+			wantBalance: &Balance{UserID: 0, BalanceAmount: 0, WithdrawnAmount: 0},
 			wantErr:     fmt.Errorf("balance has not been changed, unknown error"),
 		},
 	}
@@ -677,7 +677,7 @@ func TestSQLStorage_UpdateBalance(t *testing.T) {
 			balance := &Balance{}
 			err = db.Connection.QueryRowContext(context.Background(),
 				"SELECT balance, withdrawn, user_id FROM balance WHERE user_id = $1",
-				tt.argBalance.UserId).Scan(&balance.BalanceAmount, &balance.WithdrawnAmount, &balance.UserId)
+				tt.argBalance.UserID).Scan(&balance.BalanceAmount, &balance.WithdrawnAmount, &balance.UserID)
 
 			// проверяем наличие изменений
 			assert.Equal(t, tt.wantBalance, balance)

@@ -29,7 +29,7 @@ type Withdrawn struct {
 }
 
 type Balance struct {
-	UserId          int64
+	UserID          int64
 	BalanceAmount   int64
 	WithdrawnAmount int64
 }

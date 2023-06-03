@@ -76,8 +76,8 @@ var MockUserData = []User{
 }
 
 var MockUserBalanceData = []Balance{
-	{UserId: 0, BalanceAmount: 900, WithdrawnAmount: 15},
-	{UserId: 1, BalanceAmount: 900, WithdrawnAmount: 100},
+	{UserID: 0, BalanceAmount: 900, WithdrawnAmount: 15},
+	{UserID: 1, BalanceAmount: 900, WithdrawnAmount: 100},
 }
 
 func NewMock() *Mock {
@@ -126,7 +126,7 @@ func (m *Mock) GetUser(ctx context.Context, login, password string) (*User, erro
 
 func (m *Mock) GetBalance(ctx context.Context, user User) (*Balance, error) {
 	for _, b := range m.Balance {
-		if b.UserId == user.ID {
+		if b.UserID == user.ID {
 			return &b, nil
 		}
 	}
@@ -135,7 +135,7 @@ func (m *Mock) GetBalance(ctx context.Context, user User) (*Balance, error) {
 
 func (m *Mock) UpdateBalance(ctx context.Context, newBalance Balance) error {
 	for i := range m.Balance {
-		if m.Balance[i].UserId == newBalance.UserId {
+		if m.Balance[i].UserID == newBalance.UserID {
 			m.Balance[i] = newBalance
 			return nil
 		}
@@ -202,7 +202,7 @@ func (m *Mock) AddWithdrawn(ctx context.Context, orderNumber string, amount int6
 	}
 	m.Withdrawn = append(m.Withdrawn, w)
 	newBalance := Balance{
-		UserId:          user.ID,
+		UserID:          user.ID,
 		BalanceAmount:   curBalance.BalanceAmount - amount,
 		WithdrawnAmount: curBalance.WithdrawnAmount + amount,
 	}
