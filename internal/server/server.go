@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"github.com/firesworder/loyalty_program/internal/storage"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -10,6 +11,9 @@ import (
 	"net/url"
 )
 
+// todo: настроить логирование
+
+// todo: перенести в блок авторизации
 type tokenKey string
 
 type Server struct {
@@ -53,24 +57,32 @@ func (s *Server) Start() {
 	log.Fatal(server.ListenAndServe())
 }
 
+func handleInternalError(err error, w http.ResponseWriter) {
+	log.Println(err)
+	http.Error(w, "", http.StatusInternalServerError)
+}
+
+// todo: написать тесты для функции
 func (s *Server) InitAuthToken(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		tokenCookie, err := request.Cookie("token")
-		if err == nil {
+		// если нет куки(ошибка ErrNoCookie) - ничего не делать
+		if err != nil && !errors.Is(err, http.ErrNoCookie) {
+			handleInternalError(err, writer)
+			return
+		} else if err == nil {
 			token, err := url.QueryUnescape(tokenCookie.Value)
 			if err != nil {
-				http.Error(writer, err.Error(), http.StatusInternalServerError)
+				handleInternalError(err, writer)
 				return
 			}
+
+			// меняю контекст запроса
 			ctx := request.Context()
 			key := tokenKey("token")
 			ctx = context.WithValue(ctx, key, token)
 			request = request.WithContext(ctx)
-		} else if err != http.ErrNoCookie {
-			http.Error(writer, err.Error(), http.StatusInternalServerError)
-			return
 		}
-		// если нет куки - ничего не делать
 		next.ServeHTTP(writer, request)
 	})
 }

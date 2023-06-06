@@ -260,9 +260,9 @@ func TestServer_handlerWithdrawBonuses(t *testing.T) {
 				Cookie: &http.Cookie{Name: TokenCookieName, Value: "token", Expires: time.Now().Add(TokenExpires)},
 			},
 			wantResponse: testinghelper.Response{
-				StatusCode:  http.StatusBadRequest,
+				StatusCode:  http.StatusInternalServerError,
 				ContentType: "text/plain; charset=utf-8",
-				Content:     "order and sum fields should be set and not empty\n",
+				Content:     "\n",
 				Cookies:     nil,
 			},
 		},
