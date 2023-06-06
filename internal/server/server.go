@@ -17,14 +17,18 @@ type Server struct {
 	Storage     storage.Storage
 	Router      chi.Router
 	TokensCache *AuthTokensCache
+	tokenGenKey []byte
 }
 
-func NewServer(addr string, storage storage.Storage) *Server {
-	s := &Server{Address: addr}
+func NewServer(addr string, storage storage.Storage) (s *Server, err error) {
+	s = &Server{Address: addr}
 	s.Storage = storage
 	s.TokensCache = NewAuthTokensCache(nil)
+	if s.tokenGenKey, err = generateRandom(32); err != nil {
+		return nil, err
+	}
 	s.InitRouter()
-	return s
+	return s, nil
 }
 
 func (s *Server) InitRouter() {

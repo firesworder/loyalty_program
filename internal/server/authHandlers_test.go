@@ -108,7 +108,7 @@ func Test_checkReqAuthData(t *testing.T) {
 	}
 }
 
-func Test_setAuthTokenCookie(t *testing.T) {
+func Test_setTokenCookie(t *testing.T) {
 	cookieName, cookieValue := "token", "some_token"
 	ts := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		setTokenCookie(writer, cookieValue)
@@ -123,7 +123,8 @@ func Test_setAuthTokenCookie(t *testing.T) {
 }
 
 func TestServer_handlerLoginUser(t *testing.T) {
-	serverObj := NewServer("", storage.NewMock())
+	serverObj, err := NewServer("", storage.NewMock())
+	require.NoError(t, err)
 	ts := httptest.NewServer(serverObj.Router)
 	defer ts.Close()
 
@@ -159,7 +160,7 @@ func TestServer_handlerLoginUser(t *testing.T) {
 			wantResponse: testinghelper.Response{
 				StatusCode:  http.StatusUnauthorized,
 				ContentType: "text/plain; charset=utf-8",
-				Content:     "login or password incorrect\n",
+				Content:     "password incorrect\n",
 			},
 			wantCookie: false,
 		},
@@ -174,7 +175,7 @@ func TestServer_handlerLoginUser(t *testing.T) {
 			wantResponse: testinghelper.Response{
 				StatusCode:  http.StatusUnauthorized,
 				ContentType: "text/plain; charset=utf-8",
-				Content:     "login or password incorrect\n",
+				Content:     "login not exist\n",
 			},
 			wantCookie: false,
 		},
@@ -215,7 +216,7 @@ func TestServer_handlerLoginUser(t *testing.T) {
 			// проверяем куку
 			gotCookie := getCookie(gotResp.Cookies, TokenCookieName)
 			assert.Equal(t, tt.wantCookie, gotCookie != nil)
-			if tt.wantCookie {
+			if gotCookie != nil {
 				// проверяем наличие пользователя в кеше
 				_, userInCache := serverObj.TokensCache.Users[gotCookie.value]
 				assert.Equal(t, true, userInCache)
@@ -231,7 +232,8 @@ func TestServer_handlerRegisterUser(t *testing.T) {
 	userAdmin := storage.User{Login: "admin", Password: "admin"}
 	userPostgres := storage.User{Login: "postgres", Password: "postgres"}
 
-	serverObj := NewServer("", storage.NewMock())
+	serverObj, err := NewServer("", storage.NewMock())
+	require.NoError(t, err)
 	ts := httptest.NewServer(serverObj.Router)
 	defer ts.Close()
 

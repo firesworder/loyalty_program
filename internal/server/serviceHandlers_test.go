@@ -5,6 +5,7 @@ import (
 	"github.com/firesworder/loyalty_program/internal/storage"
 	"github.com/firesworder/loyalty_program/internal/testinghelper"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -44,7 +45,8 @@ func Test_checkOrderNumberByLuhn(t *testing.T) {
 
 func TestServer_handlerRegisterOrderNumber(t *testing.T) {
 	sM := storage.NewMock()
-	server := NewServer("", sM)
+	server, err := NewServer("", sM)
+	require.NoError(t, err)
 	server.TokensCache.Users["token"] = storage.User{Login: "admin", Password: "admin"}
 	ts := httptest.NewServer(server.Router)
 	defer ts.Close()
@@ -139,7 +141,8 @@ func TestServer_handlerRegisterOrderNumber(t *testing.T) {
 }
 
 func TestServer_handlerGetOrderStatusList(t *testing.T) {
-	server := NewServer("", storage.NewMock())
+	server, err := NewServer("", storage.NewMock())
+	require.NoError(t, err)
 	server.TokensCache.Users["token"] = storage.User{Login: "admin", Password: "admin"}
 	ts := httptest.NewServer(server.Router)
 	defer ts.Close()
@@ -177,7 +180,8 @@ func TestServer_handlerGetOrderStatusList(t *testing.T) {
 }
 
 func TestServer_handlerGetBalance(t *testing.T) {
-	server := NewServer("", storage.NewMock())
+	server, err := NewServer("", storage.NewMock())
+	require.NoError(t, err)
 	server.TokensCache.Users["token"] = storage.User{Login: "admin", Password: "admin"}
 	ts := httptest.NewServer(server.Router)
 	defer ts.Close()
@@ -214,7 +218,8 @@ func TestServer_handlerGetBalance(t *testing.T) {
 
 func TestServer_handlerWithdrawBonuses(t *testing.T) {
 	sM := storage.NewMock()
-	server := NewServer("", sM)
+	server, err := NewServer("", sM)
+	require.NoError(t, err)
 	server.TokensCache.Users["token"] = storage.User{Login: "admin", Password: "admin"}
 	ts := httptest.NewServer(server.Router)
 	defer ts.Close()
@@ -295,7 +300,8 @@ func TestServer_handlerWithdrawBonuses(t *testing.T) {
 }
 
 func TestServer_handlerGetWithdrawals(t *testing.T) {
-	server := NewServer("", storage.NewMock())
+	server, err := NewServer("", storage.NewMock())
+	require.NoError(t, err)
 	server.TokensCache.Users["token"] = storage.User{Login: "admin", Password: "admin"}
 	ts := httptest.NewServer(server.Router)
 	defer ts.Close()

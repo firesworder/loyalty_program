@@ -47,22 +47,24 @@ func (db *SQLStorage) CreateTablesIfNotExists(ctx context.Context) (err error) {
 	return nil
 }
 
-func (db *SQLStorage) AddUser(ctx context.Context, login, password string) (*User, error) {
+func (db *SQLStorage) AddUser(ctx context.Context, login, hashedPassword string) (*User, error) {
 	var id int64
 	err := db.Connection.QueryRowContext(ctx,
 		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id",
-		login, password,
+		login, hashedPassword,
 	).Scan(&id)
 	if err != nil {
-		pgErr := err.(*pgconn.PgError)
-		if pgErr.Code == "23505" {
+		pgErr, ok := err.(*pgconn.PgError)
+		if ok && pgErr.Code == "23505" {
 			return nil, ErrLoginExist
 		}
 		return nil, err
 	}
-
-	u := User{ID: id, Login: login, Password: password}
-	db.AddUserBalance(ctx, u)
+	u := User{ID: id, Login: login, Password: hashedPassword}
+	err = db.AddUserBalance(ctx, u)
+	if err != nil {
+		return nil, err
+	}
 	return &u, nil
 }
 
@@ -83,14 +85,15 @@ func (db *SQLStorage) AddUserBalance(ctx context.Context, user User) error {
 	return nil
 }
 
-func (db *SQLStorage) GetUser(ctx context.Context, login, password string) (*User, error) {
+func (db *SQLStorage) GetUser(ctx context.Context, login string) (*User, error) {
 	u := User{}
 	err := db.Connection.QueryRowContext(ctx,
-		"SELECT id, login, password FROM users WHERE login = $1 AND password = $2",
-		login, password).Scan(&u.ID, &u.Login, &u.Password)
+		"SELECT id, login, password FROM users WHERE login = $1", login,
+	).Scan(&u.ID, &u.Login, &u.Password)
 	if err != nil {
+		// если пользователь с таким логином не найден
 		if err == sql.ErrNoRows {
-			return nil, ErrAuthDataIncorrect
+			return nil, ErrLoginNotExist
 		}
 		return nil, err
 	}
