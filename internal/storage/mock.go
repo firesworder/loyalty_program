@@ -133,16 +133,6 @@ func (m *Mock) GetBalance(ctx context.Context, user User) (*Balance, error) {
 	return nil, fmt.Errorf("user balance not defined")
 }
 
-func (m *Mock) UpdateBalance(ctx context.Context, newBalance Balance) error {
-	for i := range m.Balance {
-		if m.Balance[i].UserID == newBalance.UserID {
-			m.Balance[i] = newBalance
-			return nil
-		}
-	}
-	return fmt.Errorf("user balance not defined")
-}
-
 func (m *Mock) GetWithdrawnList(ctx context.Context, user User) []Withdrawn {
 	result := make([]Withdrawn, 0)
 	for _, mW := range m.Withdrawn {
@@ -206,9 +196,17 @@ func (m *Mock) AddWithdrawn(ctx context.Context, orderNumber string, amount floa
 		BalanceAmount:   curBalance.BalanceAmount - amount,
 		WithdrawnAmount: curBalance.WithdrawnAmount + amount,
 	}
-	err = m.UpdateBalance(ctx, newBalance)
-	if err != nil {
-		return err
+
+	var isBalanceUpdated bool
+	for i := range m.Balance {
+		if m.Balance[i].UserID == newBalance.UserID {
+			m.Balance[i] = newBalance
+			isBalanceUpdated = true
+			break
+		}
+	}
+	if !isBalanceUpdated {
+		return fmt.Errorf("user balance not defined")
 	}
 
 	return nil

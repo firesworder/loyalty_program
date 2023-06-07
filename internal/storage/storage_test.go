@@ -638,66 +638,6 @@ func TestSQLStorage_GetUser(t *testing.T) {
 	undoTestChanges(t, db.Connection)
 }
 
-func TestSQLStorage_UpdateBalance(t *testing.T) {
-	if !isDevDBAvailable {
-		t.Skipf("dev db is not available. skipping")
-	}
-
-	db, err := NewSQLStorage(devDSN)
-	defer db.Connection.Close()
-	require.NoError(t, err)
-
-	// вставка тестовых данных
-	undoTestChanges(t, db.Connection)
-
-	var userID int64
-	err = db.Connection.QueryRowContext(context.Background(),
-		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userID)
-	require.NoError(t, err)
-
-	_, err = db.Connection.ExecContext(context.Background(),
-		"INSERT INTO balance(balance, withdrawn, user_id) VALUES ($1, $2, $3)",
-		250, 130, userID)
-	require.NoError(t, err)
-
-	tests := []struct {
-		name        string
-		argBalance  Balance
-		wantBalance *Balance
-		wantErr     error
-	}{
-		{
-			name:        "Test 1. Correct update balance",
-			argBalance:  Balance{UserID: userID, WithdrawnAmount: 150, BalanceAmount: 230},
-			wantBalance: &Balance{UserID: userID, WithdrawnAmount: 150, BalanceAmount: 230},
-			wantErr:     nil,
-		},
-		{
-			name:        "Test 2. Incorrect update, user not found",
-			argBalance:  Balance{UserID: 31333, WithdrawnAmount: 300, BalanceAmount: 500},
-			wantBalance: &Balance{UserID: 0, BalanceAmount: 0, WithdrawnAmount: 0},
-			wantErr:     fmt.Errorf("balance has not been changed, unknown error"),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err = db.UpdateBalance(context.Background(), tt.argBalance)
-			assert.Equal(t, err, tt.wantErr)
-
-			// получаем текущие значения баланса из бд
-			balance := &Balance{}
-			err = db.Connection.QueryRowContext(context.Background(),
-				"SELECT balance, withdrawn, user_id FROM balance WHERE user_id = $1",
-				tt.argBalance.UserID).Scan(&balance.BalanceAmount, &balance.WithdrawnAmount, &balance.UserID)
-
-			// проверяем наличие изменений
-			assert.Equal(t, tt.wantBalance, balance)
-		})
-	}
-
-	undoTestChanges(t, db.Connection)
-}
-
 func TestSQLStorage_UpdateOrderStatuses(t *testing.T) {
 	if !isDevDBAvailable {
 		t.Skipf("dev db is not available. skipping")

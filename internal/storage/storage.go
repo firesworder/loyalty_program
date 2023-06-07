@@ -306,20 +306,3 @@ func (db *SQLStorage) UpdateOrderStatuses(ctx context.Context, orderStatusList [
 
 	return tx.Commit()
 }
-
-func (db *SQLStorage) UpdateBalance(ctx context.Context, newBalance Balance) error {
-	result, err := db.Connection.ExecContext(ctx,
-		"UPDATE balance SET balance = $1, withdrawn = $2 WHERE user_id = $3",
-		newBalance.BalanceAmount, newBalance.WithdrawnAmount, newBalance.UserID)
-	if err != nil {
-		return err
-	}
-	rAff, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rAff == 0 {
-		return fmt.Errorf("balance has not been changed, unknown error")
-	}
-	return nil
-}
