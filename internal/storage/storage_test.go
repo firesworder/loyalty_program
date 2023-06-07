@@ -3,7 +3,6 @@ package storage
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -86,11 +85,13 @@ func TestNewSQLStorage(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			db, err := NewSQLStorage(tt.DSN)
-			defer db.Connection.Close()
 			assert.Equal(t, tt.wantErr, err != nil)
 			if !tt.wantErr {
 				err = db.Connection.PingContext(context.Background())
 				assert.NoError(t, err)
+
+				err = db.Connection.Close()
+				require.NoError(t, err)
 			}
 		})
 	}
