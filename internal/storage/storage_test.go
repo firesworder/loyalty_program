@@ -755,6 +755,7 @@ func TestSQLStorage_UpdateOrderStatuses(t *testing.T) {
 	rows, err := db.Connection.QueryContext(context.Background(),
 		`SELECT order_id, status, amount, uploaded_at, user_id FROM orders`)
 	require.NoError(t, err)
+	defer rows.Close()
 	var oS OrderStatus
 	for rows.Next() {
 		oS = OrderStatus{}

@@ -117,6 +117,7 @@ func (db *SQLStorage) GetOrderStatusList(ctx context.Context, user User) []Order
 		log.Println(err)
 		return nil
 	}
+	defer rows.Close()
 
 	var oS OrderStatus
 	for rows.Next() {
@@ -230,6 +231,7 @@ func (db *SQLStorage) GetWithdrawnList(ctx context.Context, user User) []Withdra
 		log.Println(err)
 		return nil
 	}
+	defer rows.Close()
 
 	var w Withdrawn
 	for rows.Next() {
@@ -256,6 +258,8 @@ func (db *SQLStorage) GetOrdersWithTemporaryStatus(ctx context.Context) ([]Order
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
+
 	for rows.Next() {
 		oS := OrderStatus{}
 		err := rows.Scan(&oS.Number, &oS.Status, &oS.Amount, &oS.UploadedAt, &oS.UserID)
