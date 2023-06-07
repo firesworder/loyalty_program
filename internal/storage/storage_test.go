@@ -15,7 +15,8 @@ const devDSN = "postgresql://postgres:admin@localhost:5432/loyalty_program"
 var isDevDBAvailable = true
 
 func init() {
-	_, err := NewSQLStorage(devDSN)
+	db, err := NewSQLStorage(devDSN)
+	defer db.Connection.Close()
 	if err != nil {
 		isDevDBAvailable = false
 	}
@@ -85,6 +86,7 @@ func TestNewSQLStorage(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			db, err := NewSQLStorage(tt.DSN)
+			defer db.Connection.Close()
 			assert.Equal(t, tt.wantErr, err != nil)
 			if !tt.wantErr {
 				err = db.Connection.Ping()
@@ -100,6 +102,7 @@ func TestSQLStorage_AddUser(t *testing.T) {
 	}
 
 	db, err := NewSQLStorage(devDSN)
+	defer db.Connection.Close()
 	require.NoError(t, err)
 
 	type args struct {
@@ -138,6 +141,7 @@ func TestSQLStorage_GetBalance(t *testing.T) {
 	}
 
 	db, err := NewSQLStorage(devDSN)
+	defer db.Connection.Close()
 	require.NoError(t, err)
 
 	// вставка демо данных
@@ -196,6 +200,7 @@ func TestSQLStorage_GetOrderStatusList(t *testing.T) {
 	}
 
 	db, err := NewSQLStorage(devDSN)
+	defer db.Connection.Close()
 	require.NoError(t, err)
 
 	// вставка демо данных
@@ -267,6 +272,7 @@ func TestSQLStorage_AddOrder(t *testing.T) {
 	}
 
 	db, err := NewSQLStorage(devDSN)
+	defer db.Connection.Close()
 	require.NoError(t, err)
 
 	// вставка тестовых данных
@@ -359,6 +365,7 @@ func TestSQLStorage_GetWithdrawnList(t *testing.T) {
 	}
 
 	db, err := NewSQLStorage(devDSN)
+	defer db.Connection.Close()
 	require.NoError(t, err)
 
 	// вставка тестовых данных
@@ -448,6 +455,7 @@ func TestSQLStorage_AddWithdrawn(t *testing.T) {
 	}
 
 	db, err := NewSQLStorage(devDSN)
+	defer db.Connection.Close()
 	require.NoError(t, err)
 
 	// вставка тестовых данных
@@ -521,6 +529,7 @@ func TestSQLStorage_GetOrdersWithTemporaryStatus(t *testing.T) {
 	}
 
 	db, err := NewSQLStorage(devDSN)
+	defer db.Connection.Close()
 	require.NoError(t, err)
 
 	// вставка тестовых данных
@@ -579,6 +588,7 @@ func TestSQLStorage_GetUser(t *testing.T) {
 	}
 
 	db, err := NewSQLStorage(devDSN)
+	defer db.Connection.Close()
 	require.NoError(t, err)
 
 	// вставка тестовых данных
@@ -634,6 +644,7 @@ func TestSQLStorage_UpdateBalance(t *testing.T) {
 	}
 
 	db, err := NewSQLStorage(devDSN)
+	defer db.Connection.Close()
 	require.NoError(t, err)
 
 	// вставка тестовых данных
@@ -693,6 +704,7 @@ func TestSQLStorage_UpdateOrderStatuses(t *testing.T) {
 	}
 
 	db, err := NewSQLStorage(devDSN)
+	defer db.Connection.Close()
 	require.NoError(t, err)
 
 	// вставка тестовых данных
