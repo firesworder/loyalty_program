@@ -89,7 +89,7 @@ func TestNewSQLStorage(t *testing.T) {
 			defer db.Connection.Close()
 			assert.Equal(t, tt.wantErr, err != nil)
 			if !tt.wantErr {
-				err = db.Connection.Ping()
+				err = db.Connection.PingContext(context.Background())
 				assert.NoError(t, err)
 			}
 		})
