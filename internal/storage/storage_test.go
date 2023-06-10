@@ -393,11 +393,12 @@ func TestSQLStorage_GetWithdrawnList(t *testing.T) {
 	}
 
 	db, err := NewSQLStorage(devDSN)
-	defer db.Connection.Close()
 	require.NoError(t, err)
+	defer db.Connection.Close()
 
 	// вставка тестовых данных
 	undoTestChanges(t, db.Connection)
+	defer undoTestChanges(t, db.Connection)
 
 	var userID1, userID2 int64
 	err = db.Connection.QueryRowContext(context.Background(),
@@ -406,11 +407,6 @@ func TestSQLStorage_GetWithdrawnList(t *testing.T) {
 	err = db.Connection.QueryRowContext(context.Background(),
 		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "user2", "pw2").Scan(&userID2)
 	require.NoError(t, err)
-
-	// для пакетной вставки данных в дб
-	tx, err := db.Connection.BeginTx(context.Background(), nil)
-	require.NoError(t, err)
-	defer tx.Rollback()
 
 	demoWithdrawn := []Withdrawn{
 		{
@@ -423,7 +419,7 @@ func TestSQLStorage_GetWithdrawnList(t *testing.T) {
 			OrderID:     "000971335161",
 			Amount:      50,
 			ProcessedAt: time.Date(2023, 02, 10, 12, 0, 0, 0, time.Local),
-			UserID:      userID2,
+			UserID:      userID1,
 		},
 		{
 			OrderID:     "9359943520",
@@ -439,14 +435,12 @@ func TestSQLStorage_GetWithdrawnList(t *testing.T) {
 			w.OrderID, w.Amount, w.ProcessedAt, w.UserID)
 		require.NoError(t, err)
 	}
-	err = tx.Commit()
-	require.NoError(t, err)
 
 	tests := []struct {
 		name      string
 		user      User
 		wantWList []Withdrawn
-		//wantErr error
+		wantErr   error
 	}{
 		{
 			name: "Test 1. Correct request",
@@ -455,26 +449,27 @@ func TestSQLStorage_GetWithdrawnList(t *testing.T) {
 				Login:    "demoU",
 				Password: "demoU",
 			},
-			wantWList: []Withdrawn{demoWithdrawn[0], demoWithdrawn[2]},
+			wantWList: []Withdrawn{demoWithdrawn[0], demoWithdrawn[1], demoWithdrawn[2]},
+			wantErr:   nil,
 		},
 		{
 			name: "Test 2. User has no withdrawn",
 			user: User{
-				ID:       15,
-				Login:    "someUser",
-				Password: "someUser",
+				ID:       userID2,
+				Login:    "user2",
+				Password: "pw2",
 			},
 			wantWList: []Withdrawn{},
+			wantErr:   nil,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotWList := db.GetWithdrawnList(context.Background(), tt.user)
+			gotWList, err := db.GetWithdrawnList(context.Background(), tt.user)
+			assert.Equal(t, tt.wantErr, err)
 			assert.Equal(t, tt.wantWList, gotWList)
 		})
 	}
-
-	undoTestChanges(t, db.Connection)
 }
 
 func TestSQLStorage_AddWithdrawn(t *testing.T) {

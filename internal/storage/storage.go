@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"log"
 	"time"
 )
 
@@ -198,14 +197,13 @@ func (db *SQLStorage) AddWithdrawn(ctx context.Context, orderNumber string, amou
 	return tx.Commit()
 }
 
-func (db *SQLStorage) GetWithdrawnList(ctx context.Context, user User) []Withdrawn {
+func (db *SQLStorage) GetWithdrawnList(ctx context.Context, user User) ([]Withdrawn, error) {
 	result := make([]Withdrawn, 0)
 	rows, err := db.Connection.QueryContext(ctx,
 		`SELECT order_id, amount, uploaded_at, user_id FROM withdrawn WHERE user_id = $1`,
 		user.ID)
 	if err != nil {
-		log.Println(err)
-		return nil
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -214,16 +212,15 @@ func (db *SQLStorage) GetWithdrawnList(ctx context.Context, user User) []Withdra
 		w = Withdrawn{}
 		err = rows.Scan(&w.OrderID, &w.Amount, &w.ProcessedAt, &w.UserID)
 		if err != nil {
-			return nil
+			return nil, err
 		}
 
 		result = append(result, w)
 	}
 	if err = rows.Err(); err != nil {
-		log.Println(err)
-		return nil
+		return nil, err
 	}
-	return result
+	return result, nil
 }
 
 func (db *SQLStorage) GetOrdersWithTemporaryStatus(ctx context.Context) ([]OrderStatus, error) {
