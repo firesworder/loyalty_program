@@ -256,24 +256,38 @@ func (db *SQLStorage) UpdateOrderStatuses(ctx context.Context, orderStatusList [
 
 	userBalanceUpdates := map[int64]float64{}
 	for _, oS := range orderStatusList {
-		if oS.Status == "PROCESSED" && oS.Amount != 0 {
-			userBalanceUpdates[oS.UserID] += oS.Amount
-		}
-
-		_, err = tx.ExecContext(ctx,
+		result, err := tx.ExecContext(ctx,
 			"UPDATE orders SET status = $1, amount = $2 WHERE order_id = $3",
 			oS.Status, oS.Amount, oS.Number)
 		if err != nil {
 			return err
 		}
+		rAff, err := result.RowsAffected()
+		if err != nil {
+			return err
+		} else if rAff == 0 {
+			return fmt.Errorf("unknown error, order '%s' was not updated", oS.Number)
+		}
+
+		// считаем изменения баланса соотв-х пользователей в ходе этого обновления статусов заказов
+		if oS.Status == "PROCESSED" && oS.Amount != 0 {
+			userBalanceUpdates[oS.UserID] += oS.Amount
+		}
 	}
 
+	// обновляем балансы пользователей у которых изменились статусы заказов
 	for userID, bUpdates := range userBalanceUpdates {
-		_, err = tx.ExecContext(ctx,
+		result, err := tx.ExecContext(ctx,
 			"UPDATE balance SET balance = balance + $1 WHERE user_id = $2",
 			bUpdates, userID)
 		if err != nil {
 			return err
+		}
+		rAff, err := result.RowsAffected()
+		if err != nil {
+			return err
+		} else if rAff == 0 {
+			return fmt.Errorf("unknown error, user with id '%d' was not updated", userID)
 		}
 	}
 

@@ -655,37 +655,42 @@ func TestSQLStorage_UpdateOrderStatuses(t *testing.T) {
 		t.Skipf("dev db is not available. skipping")
 	}
 
+	ctx := context.Background()
 	db, err := NewSQLStorage(devDSN)
 	defer db.Connection.Close()
 	require.NoError(t, err)
+	defer db.Connection.Close()
 
 	// вставка тестовых данных
 	undoTestChanges(t, db.Connection)
+	defer undoTestChanges(t, db.Connection)
 
 	var userID1, userID2 int64
-	err = db.Connection.QueryRowContext(context.Background(),
+	err = db.Connection.QueryRowContext(ctx,
 		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userID1)
 	require.NoError(t, err)
-	err = db.Connection.QueryRowContext(context.Background(),
+	err = db.Connection.QueryRowContext(ctx,
 		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "user2", "pw2").Scan(&userID2)
 	require.NoError(t, err)
 
-	// для пакетной вставки данных в дб
-	tx, err := db.Connection.BeginTx(context.Background(), nil)
+	_, err = db.Connection.ExecContext(ctx,
+		"INSERT INTO balance(balance, withdrawn, user_id) VALUES ($1, $2, $3)",
+		1000, 1000, userID1)
 	require.NoError(t, err)
-	defer tx.Rollback()
+	_, err = db.Connection.ExecContext(ctx,
+		"INSERT INTO balance(balance, withdrawn, user_id) VALUES ($1, $2, $3)",
+		1000, 1000, userID2)
+	require.NoError(t, err)
 
 	demo := demoOrderStatuses
 	demo[0].UserID, demo[2].UserID = userID1, userID1
 	demo[1].UserID, demo[3].UserID = userID2, userID2
 	for _, oS := range demo {
-		_, err = tx.ExecContext(context.Background(),
+		_, err = db.Connection.ExecContext(ctx,
 			"INSERT INTO orders(order_id, status, amount, uploaded_at, user_id) VALUES ($1, $2, $3, $4, $5)",
 			oS.Number, oS.Status, oS.Amount, oS.UploadedAt, oS.UserID)
 		require.NoError(t, err)
 	}
-	err = tx.Commit()
-	require.NoError(t, err)
 
 	updatedOS := []OrderStatus{demo[0]}
 	updatedOS[0].Status = "PROCESSED"
@@ -698,8 +703,8 @@ func TestSQLStorage_UpdateOrderStatuses(t *testing.T) {
 		updatedOS[0],
 	}
 
-	// само тестирование
-	err = db.UpdateOrderStatuses(context.Background(), updatedOS)
+	// запускаю тестируемую функцию
+	err = db.UpdateOrderStatuses(ctx, updatedOS)
 	require.NoError(t, err)
 
 	// беру текущее состояние таблицы orders
@@ -719,7 +724,38 @@ func TestSQLStorage_UpdateOrderStatuses(t *testing.T) {
 	err = rows.Err()
 	require.NoError(t, err)
 
+	// проверяю наличие изменений в таблице заказов
 	assert.Equal(t, wantOS, curOS)
 
-	undoTestChanges(t, db.Connection)
+	// беру текущее состояние таблицы балансов
+	balances := map[int64]Balance{}
+	rows, err = db.Connection.QueryContext(ctx,
+		`SELECT balance, withdrawn, user_id FROM balance`)
+	require.NoError(t, err)
+	defer rows.Close()
+	var b Balance
+	for rows.Next() {
+		b = Balance{}
+		err = rows.Scan(&b.BalanceAmount, &b.WithdrawnAmount, &b.UserID)
+		require.NoError(t, err)
+
+		balances[b.UserID] = b
+	}
+	err = rows.Err()
+	require.NoError(t, err)
+
+	// проверяю изменения балансов
+	expectedBalances := map[int64]Balance{
+		userID1: {
+			UserID:          userID1,
+			BalanceAmount:   1300,
+			WithdrawnAmount: 1000,
+		},
+		userID2: {
+			UserID:          userID2,
+			BalanceAmount:   1000,
+			WithdrawnAmount: 1000,
+		},
+	}
+	assert.Equal(t, expectedBalances, balances)
 }
