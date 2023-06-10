@@ -162,33 +162,22 @@ func (db *SQLStorage) AddOrder(ctx context.Context, orderNumber string, user Use
 }
 
 func (db *SQLStorage) AddWithdrawn(ctx context.Context, orderNumber string, amount float64, user User) error {
-	// проверка баланса на возможность списания
-	var curBalance, curWithdrawn float64
-	err := db.Connection.QueryRowContext(ctx,
-		"SELECT balance, withdrawn FROM balance WHERE user_id = $1", user.ID).Scan(&curBalance, &curWithdrawn)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return fmt.Errorf("no user balance data")
-		}
-		return err
-	}
-
-	// если текущий баланс меньше запрошенного списания
-	if curBalance < amount {
-		return ErrBalanceExceeded
-	}
-
-	// добавление запроса на списание
+	// попытка выполнить списание с баланса, транзакцией
 	tx, err := db.Connection.BeginTx(ctx, nil)
 	if err != nil {
 		return nil
 	}
 	defer tx.Rollback()
-	// изменение баланса оставшихся бонусов и списанных
+
+	// изменение баланса(значений баланса бонусов и кол-ва списанных баллов)
 	result, err := tx.ExecContext(ctx,
-		"UPDATE balance SET balance = $1, withdrawn = $2 WHERE user_id = $3",
-		curBalance-amount, curWithdrawn+amount, user.ID)
+		"UPDATE balance SET balance = balance - $1, withdrawn = withdrawn + $2 WHERE user_id = $3",
+		amount, amount, user.ID)
 	if err != nil {
+		pgErr, ok := err.(*pgconn.PgError)
+		if ok && (pgErr.Code == "23514" && pgErr.ConstraintName == "balance_balance_check") {
+			return ErrBalanceExceeded
+		}
 		return err
 	}
 	rAff, err := result.RowsAffected()
@@ -200,18 +189,11 @@ func (db *SQLStorage) AddWithdrawn(ctx context.Context, orderNumber string, amou
 	}
 
 	// регистрация запроса на списание
-	result, err = db.Connection.ExecContext(ctx,
+	_, err = tx.ExecContext(ctx,
 		"INSERT INTO withdrawn(order_id, amount, uploaded_at, user_id) VALUES($1, $2, $3, $4)",
 		orderNumber, amount, time.Now(), user.ID)
 	if err != nil {
 		return err
-	}
-	rAff, err = result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rAff == 0 {
-		return fmt.Errorf("withdraw was not complete, unknown error")
 	}
 	return tx.Commit()
 }

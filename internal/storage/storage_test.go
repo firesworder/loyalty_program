@@ -16,10 +16,11 @@ var isDevDBAvailable = true
 
 func init() {
 	db, err := NewSQLStorage(devDSN)
-	defer db.Connection.Close()
 	if err != nil {
 		isDevDBAvailable = false
+		return
 	}
+	defer db.Connection.Close()
 }
 
 var demoOrderStatuses = []OrderStatus{
@@ -481,20 +482,29 @@ func TestSQLStorage_AddWithdrawn(t *testing.T) {
 		t.Skipf("dev db is not available. skipping")
 	}
 
+	ctx := context.Background()
 	db, err := NewSQLStorage(devDSN)
-	defer db.Connection.Close()
 	require.NoError(t, err)
+	defer db.Connection.Close()
+
+	// чистка таблиц, до и после теста
+	undoTestChanges(t, db.Connection)
+	defer undoTestChanges(t, db.Connection)
 
 	// вставка тестовых данных
-	undoTestChanges(t, db.Connection)
-
-	var userID int64
-	err = db.Connection.QueryRowContext(context.Background(),
-		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userID)
+	var userID1, userID2 int64
+	err = db.Connection.QueryRowContext(ctx,
+		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userID1)
+	require.NoError(t, err)
+	err = db.Connection.QueryRowContext(ctx,
+		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "user2", "pw2").Scan(&userID2)
 	require.NoError(t, err)
 
-	_, err = db.Connection.ExecContext(context.Background(),
-		"INSERT INTO balance(balance, withdrawn, user_id) VALUES ($1, $2, $3)", 1000, 800, userID)
+	_, err = db.Connection.ExecContext(ctx,
+		"INSERT INTO balance(balance, withdrawn, user_id) VALUES ($1, $2, $3)", 1000, 800, userID1)
+	require.NoError(t, err)
+	_, err = db.Connection.ExecContext(ctx,
+		"INSERT INTO balance(balance, withdrawn, user_id) VALUES ($1, $2, $3)", 500, 800, userID2)
 	require.NoError(t, err)
 
 	type args struct {
@@ -514,12 +524,12 @@ func TestSQLStorage_AddWithdrawn(t *testing.T) {
 				orderNumber: "328257446760",
 				amount:      200,
 				user: User{
-					ID:       userID,
+					ID:       userID1,
 					Login:    "demoU",
 					Password: "demoU",
 				},
 			},
-			wantBalance: &Balance{BalanceAmount: 800, WithdrawnAmount: 1000, UserID: userID},
+			wantBalance: &Balance{BalanceAmount: 800, WithdrawnAmount: 1000, UserID: userID1},
 			wantErr:     nil,
 		},
 		{
@@ -528,24 +538,26 @@ func TestSQLStorage_AddWithdrawn(t *testing.T) {
 				orderNumber: "9359943520",
 				amount:      1500,
 				user: User{
-					ID:       userID,
-					Login:    "demoU",
-					Password: "demoU",
+					ID:       userID2,
+					Login:    "user2",
+					Password: "pw2",
 				},
 			},
-			// влияет тест сверху! если запускать отдельно - цифры будут отличаться(1000 и 800)
-			wantBalance: &Balance{BalanceAmount: 800, WithdrawnAmount: 1000, UserID: userID},
+			wantBalance: &Balance{BalanceAmount: 500, WithdrawnAmount: 800, UserID: userID2},
 			wantErr:     ErrBalanceExceeded,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err = db.AddWithdrawn(context.Background(), tt.orderNumber, tt.amount, tt.user)
+			err = db.AddWithdrawn(ctx, tt.orderNumber, tt.amount, tt.user)
 			assert.ErrorIs(t, err, tt.wantErr)
 
-			balance, err := db.GetBalance(context.Background(), tt.user)
+			var balance Balance
+			err = db.Connection.QueryRowContext(ctx,
+				"SELECT balance, withdrawn, user_id FROM balance WHERE user_id = $1",
+				tt.user.ID).Scan(&balance.BalanceAmount, &balance.WithdrawnAmount, &balance.UserID)
 			require.NoError(t, err)
-			assert.Equal(t, tt.wantBalance, balance)
+			assert.Equal(t, tt.wantBalance, &balance)
 		})
 	}
 }
