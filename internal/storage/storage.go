@@ -82,7 +82,7 @@ func (db *SQLStorage) AddUser(ctx context.Context, login, password string) (*Use
 func (db *SQLStorage) GetUser(ctx context.Context, login, password string) (*User, error) {
 	u := User{}
 	err := db.Connection.QueryRowContext(ctx,
-		"SELECT id, login, password FROM users WHERE login = $1 AND password = $2",
+		"SELECT id, login, password FROM users WHERE login = $1 AND password = $2 LIMIT 1",
 		login, password).Scan(&u.ID, &u.Login, &u.Password)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
