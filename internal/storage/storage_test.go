@@ -41,7 +41,7 @@ var demoOrderStatuses = []OrderStatus{
 		UploadedAt: time.Date(2023, 03, 10, 12, 0, 0, 0, time.Local),
 	},
 	{
-		Number:     "328257446760",
+		Number:     "352346287613",
 		Status:     "INVALID",
 		UploadedAt: time.Date(2023, 03, 12, 12, 0, 0, 0, time.Local),
 	},
@@ -234,43 +234,39 @@ func TestSQLStorage_GetOrderStatusList(t *testing.T) {
 		t.Skipf("dev db is not available. skipping")
 	}
 
+	ctx := context.Background()
 	db, err := NewSQLStorage(devDSN)
-	defer db.Connection.Close()
 	require.NoError(t, err)
+	defer db.Connection.Close()
 
 	// вставка демо данных
 	undoTestChanges(t, db.Connection)
+	defer undoTestChanges(t, db.Connection)
 
 	var userID1, userID2 int64
-	err = db.Connection.QueryRowContext(context.Background(),
+	err = db.Connection.QueryRowContext(ctx,
 		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userID1)
 	require.NoError(t, err)
-	err = db.Connection.QueryRowContext(context.Background(),
+	err = db.Connection.QueryRowContext(ctx,
 		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "user2", "pw2").Scan(&userID2)
 	require.NoError(t, err)
-
-	// для пакетной вставки данных в дб
-	tx, err := db.Connection.BeginTx(context.Background(), nil)
-	require.NoError(t, err)
-	defer tx.Rollback()
 
 	demo := demoOrderStatuses
 	demo[0].UserID, demo[2].UserID = userID1, userID1
 	demo[1].UserID, demo[3].UserID = userID2, userID2
 	for _, oS := range demo {
-		_, err = tx.ExecContext(context.Background(),
+		_, err = db.Connection.ExecContext(ctx,
 			"INSERT INTO orders(order_id, status, amount, uploaded_at, user_id) VALUES ($1, $2, $3, $4, $5)",
 			oS.Number, oS.Status, oS.Amount, oS.UploadedAt, oS.UserID)
 		require.NoError(t, err)
 	}
-	err = tx.Commit()
 	require.NoError(t, err)
 
 	tests := []struct {
-		name   string
-		user   User
-		wantOS []OrderStatus
-		//wantErr     error
+		name    string
+		user    User
+		wantOS  []OrderStatus
+		wantErr error
 	}{
 		{
 			name: "Test 1. User has registered orders",
@@ -279,7 +275,8 @@ func TestSQLStorage_GetOrderStatusList(t *testing.T) {
 				Login:    "demoU",
 				Password: "demoU",
 			},
-			wantOS: []OrderStatus{demo[0], demo[2]},
+			wantOS:  []OrderStatus{demo[0], demo[2]},
+			wantErr: nil,
 		},
 		{
 			name: "Test 2. User has not registered orders",
@@ -288,17 +285,18 @@ func TestSQLStorage_GetOrderStatusList(t *testing.T) {
 				Login:    "someUser",
 				Password: "someUser",
 			},
-			wantOS: []OrderStatus{},
+			wantOS:  []OrderStatus{},
+			wantErr: nil,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotOS := db.GetOrderStatusList(context.Background(), tt.user)
+			gotOS, err := db.GetOrderStatusList(ctx, tt.user)
 			assert.Equal(t, tt.wantOS, gotOS)
+			assert.Equal(t, err, tt.wantErr)
 		})
 	}
-	undoTestChanges(t, db.Connection)
 }
 
 func TestSQLStorage_AddOrder(t *testing.T) {

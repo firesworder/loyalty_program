@@ -108,13 +108,12 @@ func (db *SQLStorage) GetBalance(ctx context.Context, user User) (*Balance, erro
 	return &Balance{UserID: uid, BalanceAmount: b, WithdrawnAmount: w}, nil
 }
 
-func (db *SQLStorage) GetOrderStatusList(ctx context.Context, user User) []OrderStatus {
+func (db *SQLStorage) GetOrderStatusList(ctx context.Context, user User) ([]OrderStatus, error) {
 	result := make([]OrderStatus, 0)
 	rows, err := db.Connection.QueryContext(ctx,
 		`SELECT order_id, status, amount, uploaded_at, user_id FROM orders WHERE user_id = $1`, user.ID)
 	if err != nil {
-		log.Println(err)
-		return nil
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -123,17 +122,15 @@ func (db *SQLStorage) GetOrderStatusList(ctx context.Context, user User) []Order
 		oS = OrderStatus{}
 		err = rows.Scan(&oS.Number, &oS.Status, &oS.Amount, &oS.UploadedAt, &oS.UserID)
 		if err != nil {
-			log.Println(err)
-			return nil
+			return nil, err
 		}
 
 		result = append(result, oS)
 	}
 	if err = rows.Err(); err != nil {
-		log.Println(err)
-		return nil
+		return nil, err
 	}
-	return result
+	return result, nil
 }
 
 func (db *SQLStorage) AddOrder(ctx context.Context, orderNumber string, user User) error {
