@@ -304,36 +304,32 @@ func TestSQLStorage_AddOrder(t *testing.T) {
 		t.Skipf("dev db is not available. skipping")
 	}
 
+	ctx := context.Background()
 	db, err := NewSQLStorage(devDSN)
-	defer db.Connection.Close()
 	require.NoError(t, err)
+	defer db.Connection.Close()
 
 	// вставка тестовых данных
 	undoTestChanges(t, db.Connection)
+	defer undoTestChanges(t, db.Connection)
 
 	var userID1, userID2 int64
-	err = db.Connection.QueryRowContext(context.Background(),
+	err = db.Connection.QueryRowContext(ctx,
 		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userID1)
 	require.NoError(t, err)
-	err = db.Connection.QueryRowContext(context.Background(),
+	err = db.Connection.QueryRowContext(ctx,
 		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "user2", "pw2").Scan(&userID2)
 	require.NoError(t, err)
-
-	// для пакетной вставки данных в дб
-	tx, err := db.Connection.BeginTx(context.Background(), nil)
-	require.NoError(t, err)
-	defer tx.Rollback()
 
 	demo := demoOrderStatuses
 	demo[0].UserID, demo[2].UserID = userID1, userID1
 	demo[1].UserID, demo[3].UserID = userID2, userID2
 	for _, oS := range demo {
-		_, err = tx.ExecContext(context.Background(),
+		_, err = db.Connection.ExecContext(context.Background(),
 			"INSERT INTO orders(order_id, status, amount, uploaded_at, user_id) VALUES ($1, $2, $3, $4, $5)",
 			oS.Number, oS.Status, oS.Amount, oS.UploadedAt, oS.UserID)
 		require.NoError(t, err)
 	}
-	err = tx.Commit()
 	require.NoError(t, err)
 
 	type args struct {
@@ -388,8 +384,6 @@ func TestSQLStorage_AddOrder(t *testing.T) {
 			assert.ErrorIs(t, err, tt.wantErr)
 		})
 	}
-
-	undoTestChanges(t, db.Connection)
 }
 
 func TestSQLStorage_GetWithdrawnList(t *testing.T) {

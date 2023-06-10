@@ -134,33 +134,31 @@ func (db *SQLStorage) GetOrderStatusList(ctx context.Context, user User) ([]Orde
 }
 
 func (db *SQLStorage) AddOrder(ctx context.Context, orderNumber string, user User) error {
-	// проверка существования заказа в orders
-	exOrderID, exUserID := "", int64(0)
-	err := db.Connection.QueryRowContext(ctx,
-		"SELECT order_id, user_id FROM orders WHERE order_id = $1", orderNumber).Scan(&exOrderID, &exUserID)
-	if err != nil && err != sql.ErrNoRows {
-		return err
-	}
-	if exOrderID != "" {
-		if exUserID == user.ID {
-			return ErrOrderRegByThatUser
-		} else {
-			return ErrOrderRegByOtherUser
-		}
-	}
-
-	// вставка
-	result, err := db.Connection.ExecContext(ctx,
+	// Попытка вставить заказ в соотв-ую таблицу
+	_, err := db.Connection.ExecContext(ctx,
 		"INSERT INTO orders(order_id, status, amount, uploaded_at, user_id) VALUES ($1, $2, $3, $4, $5)",
 		orderNumber, "NEW", 0, time.Now(), user.ID)
+	// Если заказ добавился без ошибки - прекратить функцию, иначе продолжить
+	if err == nil {
+		return nil
+	} else if pgErr, ok := err.(*pgconn.PgError);
+	// если ошибка не относится к нар-ию уникальности номера заказа - вернуть ошибку
+	!ok || !(pgErr.Code == "23505" && pgErr.ConstraintName == "orders_order_id_key") {
+		return err
+	}
+
+	// Уточнение ошибки
+	var userRegOrder int64
+	err = db.Connection.QueryRowContext(ctx,
+		"SELECT user_id FROM orders WHERE order_id = $1", orderNumber).Scan(&userRegOrder)
 	if err != nil {
 		return err
 	}
-	_, err = result.RowsAffected()
-	if err != nil {
-		return err
+
+	if userRegOrder == user.ID {
+		return ErrOrderRegByThatUser
 	}
-	return nil
+	return ErrOrderRegByOtherUser
 }
 
 func (db *SQLStorage) AddWithdrawn(ctx context.Context, orderNumber string, amount float64, user User) error {
