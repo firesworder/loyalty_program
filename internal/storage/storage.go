@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -84,7 +85,7 @@ func (db *SQLStorage) GetUser(ctx context.Context, login, password string) (*Use
 		"SELECT id, login, password FROM users WHERE login = $1 AND password = $2",
 		login, password).Scan(&u.ID, &u.Login, &u.Password)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrAuthDataIncorrect
 		}
 		return nil, err

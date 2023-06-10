@@ -619,16 +619,19 @@ func TestSQLStorage_GetUser(t *testing.T) {
 		t.Skipf("dev db is not available. skipping")
 	}
 
+	ctx := context.Background()
 	db, err := NewSQLStorage(devDSN)
-	defer db.Connection.Close()
 	require.NoError(t, err)
+	defer db.Connection.Close()
 
 	// вставка тестовых данных
 	undoTestChanges(t, db.Connection)
+	defer undoTestChanges(t, db.Connection)
 
 	var userID1 int64
-	err = db.Connection.QueryRowContext(context.Background(),
-		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userID1)
+	err = db.Connection.QueryRowContext(ctx,
+		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id",
+		"demoU", "demoU").Scan(&userID1)
 	require.NoError(t, err)
 
 	type args struct {
@@ -660,14 +663,11 @@ func TestSQLStorage_GetUser(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotUser, err := db.GetUser(context.Background(), tt.login, tt.password)
+			gotUser, err := db.GetUser(ctx, tt.login, tt.password)
 			assert.Equal(t, tt.wantUser, gotUser)
 			assert.ErrorIs(t, err, tt.wantErr)
-
 		})
 	}
-
-	undoTestChanges(t, db.Connection)
 }
 
 func TestSQLStorage_UpdateOrderStatuses(t *testing.T) {
