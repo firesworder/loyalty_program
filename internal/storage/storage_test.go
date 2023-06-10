@@ -102,8 +102,24 @@ func TestSQLStorage_AddUser(t *testing.T) {
 		t.Skipf("dev db is not available. skipping")
 	}
 
+	ctx := context.Background()
 	db, err := NewSQLStorage(devDSN)
+	require.NoError(t, err)
 	defer db.Connection.Close()
+
+	// очищаю таблицы перед добавлением новых тестовых данных и по итогам прогона тестов
+	undoTestChanges(t, db.Connection)
+	defer undoTestChanges(t, db.Connection)
+
+	// подготовка тестовых данных
+	var uID int64
+	err = db.Connection.QueryRowContext(ctx,
+		"INSERT INTO users(login, password) VALUES ($1, $2) returning id",
+		"postgres", "postgres").Scan(&uID)
+	require.NoError(t, err)
+	_, err = db.Connection.ExecContext(ctx,
+		"INSERT INTO balance(balance, withdrawn, user_id) VALUES ($1, $2, $3)",
+		0, 0, uID)
 	require.NoError(t, err)
 
 	type args struct {
@@ -122,18 +138,33 @@ func TestSQLStorage_AddUser(t *testing.T) {
 		},
 		{
 			name:    "Test 2. User with that login already exist",
-			args:    args{login: "demo1", password: "password"},
+			args:    args{login: "postgres", password: "password"},
 			wantErr: ErrLoginExist,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err = db.AddUser(context.Background(), tt.login, tt.password)
+			_, err = db.AddUser(ctx, tt.login, tt.password)
 			assert.ErrorIs(t, err, tt.wantErr)
+
+			if tt.wantErr == nil {
+				// проверяю, что пользователь появился в таблице пользователей
+				var newUserID int64
+				err = db.Connection.QueryRowContext(ctx,
+					"SELECT id FROM users WHERE login = $1 AND password = $2 LIMIT 1",
+					tt.login, tt.password).Scan(&newUserID)
+				require.NoError(t, err)
+
+				// проверяю, что пользователю был добавлен баланс в таблице балансов
+				var newUserBalanceId int64
+				err = db.Connection.QueryRowContext(ctx,
+					"SELECT id FROM balance WHERE user_id = $1",
+					newUserID).Scan(&newUserBalanceId)
+				require.NoError(t, err)
+			}
 		})
 	}
-	undoTestChanges(t, db.Connection)
 }
 
 func TestSQLStorage_GetBalance(t *testing.T) {

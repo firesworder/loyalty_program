@@ -49,38 +49,33 @@ func (db *SQLStorage) CreateTablesIfNotExists(ctx context.Context) (err error) {
 
 func (db *SQLStorage) AddUser(ctx context.Context, login, password string) (*User, error) {
 	var id int64
-	err := db.Connection.QueryRowContext(ctx,
+	tx, err := db.Connection.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	// Добавляем пользователя в соотв. таблицу
+	err = tx.QueryRowContext(ctx,
 		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id",
 		login, password,
 	).Scan(&id)
 	if err != nil {
-		pgErr := err.(*pgconn.PgError)
-		if pgErr.Code == "23505" {
+		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
 			return nil, ErrLoginExist
 		}
 		return nil, err
 	}
 
-	u := User{ID: id, Login: login, Password: password}
-	db.AddUserBalance(ctx, u)
-	return &u, nil
-}
-
-func (db *SQLStorage) AddUserBalance(ctx context.Context, user User) error {
-	result, err := db.Connection.ExecContext(ctx,
+	// Добавляем баланс пользователя
+	_, err = tx.ExecContext(ctx,
 		"INSERT INTO balance(balance, withdrawn, user_id) VALUES ($1, $2, $3)",
-		0, 0, user.ID)
+		0, 0, id)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	rAff, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rAff != 0 {
-		return fmt.Errorf("unknown error was occured on create user balance")
-	}
-	return nil
+
+	return &User{ID: id, Login: login, Password: password}, tx.Commit()
 }
 
 func (db *SQLStorage) GetUser(ctx context.Context, login, password string) (*User, error) {
