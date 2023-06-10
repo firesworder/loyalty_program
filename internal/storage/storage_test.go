@@ -6,22 +6,12 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"log"
 	"testing"
 	"time"
 )
 
 const devDSN = "postgresql://postgres:admin@localhost:5432/loyalty_program"
-
-var isDevDBAvailable = true
-
-func init() {
-	db, err := NewSQLStorage(devDSN)
-	if err != nil {
-		isDevDBAvailable = false
-		return
-	}
-	defer db.Connection.Close()
-}
 
 var demoOrderStatuses = []OrderStatus{
 	{
@@ -48,7 +38,7 @@ var demoOrderStatuses = []OrderStatus{
 	},
 }
 
-func undoTestChanges(t *testing.T, db *sql.DB) {
+func clearTables(t *testing.T, db *sql.DB) {
 	var err error
 	_, err = db.ExecContext(context.Background(), "DELETE FROM withdrawn")
 	require.NoError(t, err)
@@ -64,10 +54,6 @@ func undoTestChanges(t *testing.T, db *sql.DB) {
 }
 
 func TestNewSQLStorage(t *testing.T) {
-	if !isDevDBAvailable {
-		t.Skipf("dev db is not available. skipping")
-	}
-
 	tests := []struct {
 		name    string
 		DSN     string
@@ -100,18 +86,17 @@ func TestNewSQLStorage(t *testing.T) {
 }
 
 func TestSQLStorage_AddUser(t *testing.T) {
-	if !isDevDBAvailable {
-		t.Skipf("dev db is not available. skipping")
-	}
-
 	ctx := context.Background()
 	db, err := NewSQLStorage(devDSN)
-	require.NoError(t, err)
+	if err != nil {
+		log.Println(err)
+		t.Skipf("dev db is not available. skipping")
+	}
 	defer db.Connection.Close()
 
 	// очищаю таблицы перед добавлением новых тестовых данных и по итогам прогона тестов
-	undoTestChanges(t, db.Connection)
-	defer undoTestChanges(t, db.Connection)
+	clearTables(t, db.Connection)
+	defer clearTables(t, db.Connection)
 
 	// подготовка тестовых данных
 	var uID int64
@@ -170,18 +155,17 @@ func TestSQLStorage_AddUser(t *testing.T) {
 }
 
 func TestSQLStorage_GetBalance(t *testing.T) {
-	if !isDevDBAvailable {
-		t.Skipf("dev db is not available. skipping")
-	}
-
 	ctx := context.Background()
 	db, err := NewSQLStorage(devDSN)
-	require.NoError(t, err)
+	if err != nil {
+		log.Println(err)
+		t.Skipf("dev db is not available. skipping")
+	}
 	defer db.Connection.Close()
 
 	// чищу таблицы до и после теста
-	undoTestChanges(t, db.Connection)
-	defer undoTestChanges(t, db.Connection)
+	clearTables(t, db.Connection)
+	defer clearTables(t, db.Connection)
 
 	// вставка демо данных
 	var userID int64
@@ -231,18 +215,17 @@ func TestSQLStorage_GetBalance(t *testing.T) {
 }
 
 func TestSQLStorage_GetOrderStatusList(t *testing.T) {
-	if !isDevDBAvailable {
-		t.Skipf("dev db is not available. skipping")
-	}
-
 	ctx := context.Background()
 	db, err := NewSQLStorage(devDSN)
-	require.NoError(t, err)
+	if err != nil {
+		log.Println(err)
+		t.Skipf("dev db is not available. skipping")
+	}
 	defer db.Connection.Close()
 
 	// вставка демо данных
-	undoTestChanges(t, db.Connection)
-	defer undoTestChanges(t, db.Connection)
+	clearTables(t, db.Connection)
+	defer clearTables(t, db.Connection)
 
 	var userID1, userID2 int64
 	err = db.Connection.QueryRowContext(ctx,
@@ -301,18 +284,17 @@ func TestSQLStorage_GetOrderStatusList(t *testing.T) {
 }
 
 func TestSQLStorage_AddOrder(t *testing.T) {
-	if !isDevDBAvailable {
-		t.Skipf("dev db is not available. skipping")
-	}
-
 	ctx := context.Background()
 	db, err := NewSQLStorage(devDSN)
-	require.NoError(t, err)
+	if err != nil {
+		log.Println(err)
+		t.Skipf("dev db is not available. skipping")
+	}
 	defer db.Connection.Close()
 
 	// вставка тестовых данных
-	undoTestChanges(t, db.Connection)
-	defer undoTestChanges(t, db.Connection)
+	clearTables(t, db.Connection)
+	defer clearTables(t, db.Connection)
 
 	var userID1, userID2 int64
 	err = db.Connection.QueryRowContext(ctx,
@@ -388,17 +370,16 @@ func TestSQLStorage_AddOrder(t *testing.T) {
 }
 
 func TestSQLStorage_GetWithdrawnList(t *testing.T) {
-	if !isDevDBAvailable {
+	db, err := NewSQLStorage(devDSN)
+	if err != nil {
+		log.Println(err)
 		t.Skipf("dev db is not available. skipping")
 	}
-
-	db, err := NewSQLStorage(devDSN)
-	require.NoError(t, err)
 	defer db.Connection.Close()
 
 	// вставка тестовых данных
-	undoTestChanges(t, db.Connection)
-	defer undoTestChanges(t, db.Connection)
+	clearTables(t, db.Connection)
+	defer clearTables(t, db.Connection)
 
 	var userID1, userID2 int64
 	err = db.Connection.QueryRowContext(context.Background(),
@@ -473,18 +454,17 @@ func TestSQLStorage_GetWithdrawnList(t *testing.T) {
 }
 
 func TestSQLStorage_AddWithdrawn(t *testing.T) {
-	if !isDevDBAvailable {
-		t.Skipf("dev db is not available. skipping")
-	}
-
 	ctx := context.Background()
 	db, err := NewSQLStorage(devDSN)
-	require.NoError(t, err)
+	if err != nil {
+		log.Println(err)
+		t.Skipf("dev db is not available. skipping")
+	}
 	defer db.Connection.Close()
 
 	// чистка таблиц, до и после теста
-	undoTestChanges(t, db.Connection)
-	defer undoTestChanges(t, db.Connection)
+	clearTables(t, db.Connection)
+	defer clearTables(t, db.Connection)
 
 	// вставка тестовых данных
 	var userID1, userID2 int64
@@ -558,17 +538,16 @@ func TestSQLStorage_AddWithdrawn(t *testing.T) {
 }
 
 func TestSQLStorage_GetOrdersWithTemporaryStatus(t *testing.T) {
-	if !isDevDBAvailable {
+	db, err := NewSQLStorage(devDSN)
+	if err != nil {
+		log.Println(err)
 		t.Skipf("dev db is not available. skipping")
 	}
-
-	db, err := NewSQLStorage(devDSN)
-	require.NoError(t, err)
 	defer db.Connection.Close()
 
 	// вставка тестовых данных
-	undoTestChanges(t, db.Connection)
-	defer undoTestChanges(t, db.Connection)
+	clearTables(t, db.Connection)
+	defer clearTables(t, db.Connection)
 
 	var userID1, userID2 int64
 	err = db.Connection.QueryRowContext(context.Background(),
@@ -595,18 +574,17 @@ func TestSQLStorage_GetOrdersWithTemporaryStatus(t *testing.T) {
 }
 
 func TestSQLStorage_GetUser(t *testing.T) {
-	if !isDevDBAvailable {
-		t.Skipf("dev db is not available. skipping")
-	}
-
 	ctx := context.Background()
 	db, err := NewSQLStorage(devDSN)
-	require.NoError(t, err)
+	if err != nil {
+		log.Println(err)
+		t.Skipf("dev db is not available. skipping")
+	}
 	defer db.Connection.Close()
 
 	// вставка тестовых данных
-	undoTestChanges(t, db.Connection)
-	defer undoTestChanges(t, db.Connection)
+	clearTables(t, db.Connection)
+	defer clearTables(t, db.Connection)
 
 	var userID1 int64
 	err = db.Connection.QueryRowContext(ctx,
@@ -651,19 +629,17 @@ func TestSQLStorage_GetUser(t *testing.T) {
 }
 
 func TestSQLStorage_UpdateOrderStatuses(t *testing.T) {
-	if !isDevDBAvailable {
-		t.Skipf("dev db is not available. skipping")
-	}
-
 	ctx := context.Background()
 	db, err := NewSQLStorage(devDSN)
-	defer db.Connection.Close()
-	require.NoError(t, err)
+	if err != nil {
+		log.Println(err)
+		t.Skipf("dev db is not available. skipping")
+	}
 	defer db.Connection.Close()
 
 	// вставка тестовых данных
-	undoTestChanges(t, db.Connection)
-	defer undoTestChanges(t, db.Connection)
+	clearTables(t, db.Connection)
+	defer clearTables(t, db.Connection)
 
 	var userID1, userID2 int64
 	err = db.Connection.QueryRowContext(ctx,
