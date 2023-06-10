@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -172,18 +173,21 @@ func TestSQLStorage_GetBalance(t *testing.T) {
 		t.Skipf("dev db is not available. skipping")
 	}
 
+	ctx := context.Background()
 	db, err := NewSQLStorage(devDSN)
-	defer db.Connection.Close()
 	require.NoError(t, err)
+	defer db.Connection.Close()
+
+	// чищу таблицы до и после теста
+	undoTestChanges(t, db.Connection)
+	defer undoTestChanges(t, db.Connection)
 
 	// вставка демо данных
-	undoTestChanges(t, db.Connection)
-
 	var userID int64
-	err = db.Connection.QueryRowContext(context.Background(),
+	err = db.Connection.QueryRowContext(ctx,
 		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userID)
 	require.NoError(t, err)
-	_, err = db.Connection.ExecContext(context.Background(),
+	_, err = db.Connection.ExecContext(ctx,
 		"INSERT INTO balance(balance, withdrawn, user_id) VALUES ($1, $2, $3)",
 		250, 130, userID)
 	require.NoError(t, err)
@@ -205,25 +209,24 @@ func TestSQLStorage_GetBalance(t *testing.T) {
 			wantErr:     nil,
 		},
 		{
-			name: "Test 2. User not found",
+			name: "Test 2. User balance not found",
 			user: User{
 				ID:       15,
 				Login:    "someUser",
 				Password: "someUser",
 			},
 			wantBalance: nil,
-			wantErr:     sql.ErrNoRows,
+			wantErr:     fmt.Errorf("user balance was not found"),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			balance, err := db.GetBalance(context.Background(), tt.user)
+			balance, err := db.GetBalance(ctx, tt.user)
 			assert.Equal(t, tt.wantErr, err)
 			assert.Equal(t, tt.wantBalance, balance)
 		})
 	}
-	undoTestChanges(t, db.Connection)
 }
 
 func TestSQLStorage_GetOrderStatusList(t *testing.T) {

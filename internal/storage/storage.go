@@ -97,9 +97,12 @@ func (db *SQLStorage) GetBalance(ctx context.Context, user User) (*Balance, erro
 	var uid int64
 	var b, w float64
 	err := db.Connection.QueryRowContext(ctx,
-		"SELECT balance, withdrawn, user_id FROM balance WHERE user_id = $1 LIMIT 1", user.ID,
-	).Scan(&b, &w, &uid)
+		"SELECT balance, withdrawn, user_id FROM balance WHERE user_id = $1 LIMIT 1",
+		user.ID).Scan(&b, &w, &uid)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("user balance was not found")
+		}
 		return nil, err
 	}
 	return &Balance{UserID: uid, BalanceAmount: b, WithdrawnAmount: w}, nil
