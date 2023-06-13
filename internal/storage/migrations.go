@@ -11,9 +11,9 @@ CREATE TABLE IF NOT EXISTS Users
 CREATE TABLE IF NOT EXISTS Orders
 (
     id SERIAL PRIMARY KEY,
-    order_id varchar(50),
+    order_id varchar(50) UNIQUE,
     status varchar(15),
-	amount REAL,
+	amount REAL CHECK(amount >= 0),
 	uploaded_at timestamp with time zone,
 	processed_at timestamp with time zone,
 	user_id INTEGER REFERENCES Users(id)
@@ -22,8 +22,8 @@ CREATE TABLE IF NOT EXISTS Orders
 CREATE TABLE IF NOT EXISTS Withdrawn
 (
     id SERIAL PRIMARY KEY,
-    order_id varchar(50),
-    amount REAL,
+    order_id varchar(50) UNIQUE,
+    amount REAL CHECK(amount >= 0),
 	uploaded_at timestamp with time zone,
 	user_id INTEGER REFERENCES Users(id)
 );
@@ -31,8 +31,8 @@ CREATE TABLE IF NOT EXISTS Withdrawn
 CREATE TABLE IF NOT EXISTS Balance
 (
 	id      SERIAL PRIMARY KEY,
-	balance REAL,
-	withdrawn REAL,
-	user_id INTEGER REFERENCES Users(id)
+	balance REAL CHECK(balance >= 0),
+	withdrawn REAL CHECK(withdrawn >= 0),
+	user_id INTEGER UNIQUE REFERENCES Users(id)
 );
 `

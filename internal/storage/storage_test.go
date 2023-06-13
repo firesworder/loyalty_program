@@ -6,20 +6,12 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"log"
 	"testing"
 	"time"
 )
 
 const devDSN = "postgresql://postgres:admin@localhost:5432/loyalty_program"
-
-var isDevDBAvailable = true
-
-func init() {
-	_, err := NewSQLStorage(devDSN)
-	if err != nil {
-		isDevDBAvailable = false
-	}
-}
 
 var demoOrderStatuses = []OrderStatus{
 	{
@@ -40,13 +32,13 @@ var demoOrderStatuses = []OrderStatus{
 		UploadedAt: time.Date(2023, 03, 10, 12, 0, 0, 0, time.Local),
 	},
 	{
-		Number:     "328257446760",
+		Number:     "352346287613",
 		Status:     "INVALID",
 		UploadedAt: time.Date(2023, 03, 12, 12, 0, 0, 0, time.Local),
 	},
 }
 
-func undoTestChanges(t *testing.T, db *sql.DB) {
+func clearTables(t *testing.T, db *sql.DB) {
 	var err error
 	_, err = db.ExecContext(context.Background(), "DELETE FROM withdrawn")
 	require.NoError(t, err)
@@ -62,10 +54,6 @@ func undoTestChanges(t *testing.T, db *sql.DB) {
 }
 
 func TestNewSQLStorage(t *testing.T) {
-	if !isDevDBAvailable {
-		t.Skipf("dev db is not available. skipping")
-	}
-
 	tests := []struct {
 		name    string
 		DSN     string
@@ -87,19 +75,38 @@ func TestNewSQLStorage(t *testing.T) {
 			db, err := NewSQLStorage(tt.DSN)
 			assert.Equal(t, tt.wantErr, err != nil)
 			if !tt.wantErr {
-				err = db.Connection.Ping()
+				err = db.Connection.PingContext(context.Background())
 				assert.NoError(t, err)
+
+				err = db.Connection.Close()
+				require.NoError(t, err)
 			}
 		})
 	}
 }
 
 func TestSQLStorage_AddUser(t *testing.T) {
-	if !isDevDBAvailable {
+	ctx := context.Background()
+	db, err := NewSQLStorage(devDSN)
+	if err != nil {
+		log.Println(err)
 		t.Skipf("dev db is not available. skipping")
 	}
+	defer db.Connection.Close()
 
-	db, err := NewSQLStorage(devDSN)
+	// очищаю таблицы перед добавлением новых тестовых данных и по итогам прогона тестов
+	clearTables(t, db.Connection)
+	defer clearTables(t, db.Connection)
+
+	// подготовка тестовых данных
+	var uID int64
+	err = db.Connection.QueryRowContext(ctx,
+		"INSERT INTO users(login, password) VALUES ($1, $2) returning id",
+		"postgres", "postgres").Scan(&uID)
+	require.NoError(t, err)
+	_, err = db.Connection.ExecContext(ctx,
+		"INSERT INTO balance(balance, withdrawn, user_id) VALUES ($1, $2, $3)",
+		0, 0, uID)
 	require.NoError(t, err)
 
 	type args struct {
@@ -118,36 +125,54 @@ func TestSQLStorage_AddUser(t *testing.T) {
 		},
 		{
 			name:    "Test 2. User with that login already exist",
-			args:    args{login: "demo1", password: "password"},
+			args:    args{login: "postgres", password: "password"},
 			wantErr: ErrLoginExist,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err = db.AddUser(context.Background(), tt.login, tt.password)
+			_, err = db.AddUser(ctx, tt.login, tt.password)
 			assert.ErrorIs(t, err, tt.wantErr)
+
+			if tt.wantErr == nil {
+				// проверяю, что пользователь появился в таблице пользователей
+				var newUserID int64
+				err = db.Connection.QueryRowContext(ctx,
+					"SELECT id FROM users WHERE login = $1 AND password = $2 LIMIT 1",
+					tt.login, tt.password).Scan(&newUserID)
+				require.NoError(t, err)
+
+				// проверяю, что пользователю был добавлен баланс в таблице балансов
+				var newUserBalanceId int64
+				err = db.Connection.QueryRowContext(ctx,
+					"SELECT id FROM balance WHERE user_id = $1",
+					newUserID).Scan(&newUserBalanceId)
+				require.NoError(t, err)
+			}
 		})
 	}
-	undoTestChanges(t, db.Connection)
 }
 
 func TestSQLStorage_GetBalance(t *testing.T) {
-	if !isDevDBAvailable {
+	ctx := context.Background()
+	db, err := NewSQLStorage(devDSN)
+	if err != nil {
+		log.Println(err)
 		t.Skipf("dev db is not available. skipping")
 	}
+	defer db.Connection.Close()
 
-	db, err := NewSQLStorage(devDSN)
-	require.NoError(t, err)
+	// чищу таблицы до и после теста
+	clearTables(t, db.Connection)
+	defer clearTables(t, db.Connection)
 
 	// вставка демо данных
-	undoTestChanges(t, db.Connection)
-
 	var userID int64
-	err = db.Connection.QueryRowContext(context.Background(),
+	err = db.Connection.QueryRowContext(ctx,
 		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userID)
 	require.NoError(t, err)
-	_, err = db.Connection.ExecContext(context.Background(),
+	_, err = db.Connection.ExecContext(ctx,
 		"INSERT INTO balance(balance, withdrawn, user_id) VALUES ($1, $2, $3)",
 		250, 130, userID)
 	require.NoError(t, err)
@@ -169,68 +194,63 @@ func TestSQLStorage_GetBalance(t *testing.T) {
 			wantErr:     nil,
 		},
 		{
-			name: "Test 2. User not found",
+			name: "Test 2. User balance not found",
 			user: User{
 				ID:       15,
 				Login:    "someUser",
 				Password: "someUser",
 			},
 			wantBalance: nil,
-			wantErr:     sql.ErrNoRows,
+			wantErr:     fmt.Errorf("user balance was not found"),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			balance, err := db.GetBalance(context.Background(), tt.user)
+			balance, err := db.GetBalance(ctx, tt.user)
 			assert.Equal(t, tt.wantErr, err)
 			assert.Equal(t, tt.wantBalance, balance)
 		})
 	}
-	undoTestChanges(t, db.Connection)
 }
 
 func TestSQLStorage_GetOrderStatusList(t *testing.T) {
-	if !isDevDBAvailable {
+	ctx := context.Background()
+	db, err := NewSQLStorage(devDSN)
+	if err != nil {
+		log.Println(err)
 		t.Skipf("dev db is not available. skipping")
 	}
-
-	db, err := NewSQLStorage(devDSN)
-	require.NoError(t, err)
+	defer db.Connection.Close()
 
 	// вставка демо данных
-	undoTestChanges(t, db.Connection)
+	clearTables(t, db.Connection)
+	defer clearTables(t, db.Connection)
 
 	var userID1, userID2 int64
-	err = db.Connection.QueryRowContext(context.Background(),
+	err = db.Connection.QueryRowContext(ctx,
 		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userID1)
 	require.NoError(t, err)
-	err = db.Connection.QueryRowContext(context.Background(),
+	err = db.Connection.QueryRowContext(ctx,
 		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "user2", "pw2").Scan(&userID2)
 	require.NoError(t, err)
-
-	// для пакетной вставки данных в дб
-	tx, err := db.Connection.BeginTx(context.Background(), nil)
-	require.NoError(t, err)
-	defer tx.Rollback()
 
 	demo := demoOrderStatuses
 	demo[0].UserID, demo[2].UserID = userID1, userID1
 	demo[1].UserID, demo[3].UserID = userID2, userID2
 	for _, oS := range demo {
-		_, err = tx.ExecContext(context.Background(),
+		_, err = db.Connection.ExecContext(ctx,
 			"INSERT INTO orders(order_id, status, amount, uploaded_at, user_id) VALUES ($1, $2, $3, $4, $5)",
 			oS.Number, oS.Status, oS.Amount, oS.UploadedAt, oS.UserID)
 		require.NoError(t, err)
 	}
-	err = tx.Commit()
 	require.NoError(t, err)
 
 	tests := []struct {
-		name   string
-		user   User
-		wantOS []OrderStatus
-		//wantErr     error
+		name    string
+		user    User
+		wantOS  []OrderStatus
+		wantErr error
 	}{
 		{
 			name: "Test 1. User has registered orders",
@@ -239,7 +259,8 @@ func TestSQLStorage_GetOrderStatusList(t *testing.T) {
 				Login:    "demoU",
 				Password: "demoU",
 			},
-			wantOS: []OrderStatus{demo[0], demo[2]},
+			wantOS:  []OrderStatus{demo[0], demo[2]},
+			wantErr: nil,
 		},
 		{
 			name: "Test 2. User has not registered orders",
@@ -248,54 +269,50 @@ func TestSQLStorage_GetOrderStatusList(t *testing.T) {
 				Login:    "someUser",
 				Password: "someUser",
 			},
-			wantOS: []OrderStatus{},
+			wantOS:  []OrderStatus{},
+			wantErr: nil,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotOS, err := db.GetOrderStatusList(context.Background(), tt.user)
-			require.NoError(t, err)
+			gotOS, err := db.GetOrderStatusList(ctx, tt.user)
 			assert.Equal(t, tt.wantOS, gotOS)
+			assert.Equal(t, err, tt.wantErr)
 		})
 	}
-	undoTestChanges(t, db.Connection)
 }
 
 func TestSQLStorage_AddOrder(t *testing.T) {
-	if !isDevDBAvailable {
+	ctx := context.Background()
+	db, err := NewSQLStorage(devDSN)
+	if err != nil {
+		log.Println(err)
 		t.Skipf("dev db is not available. skipping")
 	}
-
-	db, err := NewSQLStorage(devDSN)
-	require.NoError(t, err)
+	defer db.Connection.Close()
 
 	// вставка тестовых данных
-	undoTestChanges(t, db.Connection)
+	clearTables(t, db.Connection)
+	defer clearTables(t, db.Connection)
 
 	var userID1, userID2 int64
-	err = db.Connection.QueryRowContext(context.Background(),
+	err = db.Connection.QueryRowContext(ctx,
 		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userID1)
 	require.NoError(t, err)
-	err = db.Connection.QueryRowContext(context.Background(),
+	err = db.Connection.QueryRowContext(ctx,
 		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "user2", "pw2").Scan(&userID2)
 	require.NoError(t, err)
-
-	// для пакетной вставки данных в дб
-	tx, err := db.Connection.BeginTx(context.Background(), nil)
-	require.NoError(t, err)
-	defer tx.Rollback()
 
 	demo := demoOrderStatuses
 	demo[0].UserID, demo[2].UserID = userID1, userID1
 	demo[1].UserID, demo[3].UserID = userID2, userID2
 	for _, oS := range demo {
-		_, err = tx.ExecContext(context.Background(),
+		_, err = db.Connection.ExecContext(context.Background(),
 			"INSERT INTO orders(order_id, status, amount, uploaded_at, user_id) VALUES ($1, $2, $3, $4, $5)",
 			oS.Number, oS.Status, oS.Amount, oS.UploadedAt, oS.UserID)
 		require.NoError(t, err)
 	}
-	err = tx.Commit()
 	require.NoError(t, err)
 
 	type args struct {
@@ -350,20 +367,19 @@ func TestSQLStorage_AddOrder(t *testing.T) {
 			assert.ErrorIs(t, err, tt.wantErr)
 		})
 	}
-
-	undoTestChanges(t, db.Connection)
 }
 
 func TestSQLStorage_GetWithdrawnList(t *testing.T) {
-	if !isDevDBAvailable {
+	db, err := NewSQLStorage(devDSN)
+	if err != nil {
+		log.Println(err)
 		t.Skipf("dev db is not available. skipping")
 	}
-
-	db, err := NewSQLStorage(devDSN)
-	require.NoError(t, err)
+	defer db.Connection.Close()
 
 	// вставка тестовых данных
-	undoTestChanges(t, db.Connection)
+	clearTables(t, db.Connection)
+	defer clearTables(t, db.Connection)
 
 	var userID1, userID2 int64
 	err = db.Connection.QueryRowContext(context.Background(),
@@ -372,11 +388,6 @@ func TestSQLStorage_GetWithdrawnList(t *testing.T) {
 	err = db.Connection.QueryRowContext(context.Background(),
 		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "user2", "pw2").Scan(&userID2)
 	require.NoError(t, err)
-
-	// для пакетной вставки данных в дб
-	tx, err := db.Connection.BeginTx(context.Background(), nil)
-	require.NoError(t, err)
-	defer tx.Rollback()
 
 	demoWithdrawn := []Withdrawn{
 		{
@@ -389,7 +400,7 @@ func TestSQLStorage_GetWithdrawnList(t *testing.T) {
 			OrderID:     "000971335161",
 			Amount:      50,
 			ProcessedAt: time.Date(2023, 02, 10, 12, 0, 0, 0, time.Local),
-			UserID:      userID2,
+			UserID:      userID1,
 		},
 		{
 			OrderID:     "9359943520",
@@ -405,14 +416,12 @@ func TestSQLStorage_GetWithdrawnList(t *testing.T) {
 			w.OrderID, w.Amount, w.ProcessedAt, w.UserID)
 		require.NoError(t, err)
 	}
-	err = tx.Commit()
-	require.NoError(t, err)
 
 	tests := []struct {
 		name      string
 		user      User
 		wantWList []Withdrawn
-		//wantErr error
+		wantErr   error
 	}{
 		{
 			name: "Test 1. Correct request",
@@ -421,47 +430,56 @@ func TestSQLStorage_GetWithdrawnList(t *testing.T) {
 				Login:    "demoU",
 				Password: "demoU",
 			},
-			wantWList: []Withdrawn{demoWithdrawn[0], demoWithdrawn[2]},
+			wantWList: []Withdrawn{demoWithdrawn[0], demoWithdrawn[1], demoWithdrawn[2]},
+			wantErr:   nil,
 		},
 		{
 			name: "Test 2. User has no withdrawn",
 			user: User{
-				ID:       15,
-				Login:    "someUser",
-				Password: "someUser",
+				ID:       userID2,
+				Login:    "user2",
+				Password: "pw2",
 			},
 			wantWList: []Withdrawn{},
+			wantErr:   nil,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			gotWList, err := db.GetWithdrawnList(context.Background(), tt.user)
-			require.NoError(t, err)
+			assert.Equal(t, tt.wantErr, err)
 			assert.Equal(t, tt.wantWList, gotWList)
 		})
 	}
-
-	undoTestChanges(t, db.Connection)
 }
 
 func TestSQLStorage_AddWithdrawn(t *testing.T) {
-	if !isDevDBAvailable {
+	ctx := context.Background()
+	db, err := NewSQLStorage(devDSN)
+	if err != nil {
+		log.Println(err)
 		t.Skipf("dev db is not available. skipping")
 	}
+	defer db.Connection.Close()
 
-	db, err := NewSQLStorage(devDSN)
-	require.NoError(t, err)
+	// чистка таблиц, до и после теста
+	clearTables(t, db.Connection)
+	defer clearTables(t, db.Connection)
 
 	// вставка тестовых данных
-	undoTestChanges(t, db.Connection)
-
-	var userID int64
-	err = db.Connection.QueryRowContext(context.Background(),
-		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userID)
+	var userID1, userID2 int64
+	err = db.Connection.QueryRowContext(ctx,
+		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userID1)
+	require.NoError(t, err)
+	err = db.Connection.QueryRowContext(ctx,
+		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "user2", "pw2").Scan(&userID2)
 	require.NoError(t, err)
 
-	_, err = db.Connection.ExecContext(context.Background(),
-		"INSERT INTO balance(balance, withdrawn, user_id) VALUES ($1, $2, $3)", 1000, 800, userID)
+	_, err = db.Connection.ExecContext(ctx,
+		"INSERT INTO balance(balance, withdrawn, user_id) VALUES ($1, $2, $3)", 1000, 800, userID1)
+	require.NoError(t, err)
+	_, err = db.Connection.ExecContext(ctx,
+		"INSERT INTO balance(balance, withdrawn, user_id) VALUES ($1, $2, $3)", 500, 800, userID2)
 	require.NoError(t, err)
 
 	type args struct {
@@ -481,12 +499,12 @@ func TestSQLStorage_AddWithdrawn(t *testing.T) {
 				orderNumber: "328257446760",
 				amount:      200,
 				user: User{
-					ID:       userID,
+					ID:       userID1,
 					Login:    "demoU",
 					Password: "demoU",
 				},
 			},
-			wantBalance: &Balance{BalanceAmount: 800, WithdrawnAmount: 1000, UserID: userID},
+			wantBalance: &Balance{BalanceAmount: 800, WithdrawnAmount: 1000, UserID: userID1},
 			wantErr:     nil,
 		},
 		{
@@ -495,100 +513,84 @@ func TestSQLStorage_AddWithdrawn(t *testing.T) {
 				orderNumber: "9359943520",
 				amount:      1500,
 				user: User{
-					ID:       userID,
-					Login:    "demoU",
-					Password: "demoU",
+					ID:       userID2,
+					Login:    "user2",
+					Password: "pw2",
 				},
 			},
-			// влияет тест сверху! если запускать отдельно - цифры будут отличаться(1000 и 800)
-			wantBalance: &Balance{BalanceAmount: 800, WithdrawnAmount: 1000, UserID: userID},
+			wantBalance: &Balance{BalanceAmount: 500, WithdrawnAmount: 800, UserID: userID2},
 			wantErr:     ErrBalanceExceeded,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err = db.AddWithdrawn(context.Background(), tt.orderNumber, tt.amount, tt.user)
+			err = db.AddWithdrawn(ctx, tt.orderNumber, tt.amount, tt.user)
 			assert.ErrorIs(t, err, tt.wantErr)
 
-			balance, err := db.GetBalance(context.Background(), tt.user)
+			var balance Balance
+			err = db.Connection.QueryRowContext(ctx,
+				"SELECT balance, withdrawn, user_id FROM balance WHERE user_id = $1",
+				tt.user.ID).Scan(&balance.BalanceAmount, &balance.WithdrawnAmount, &balance.UserID)
 			require.NoError(t, err)
-			assert.Equal(t, tt.wantBalance, balance)
+			assert.Equal(t, tt.wantBalance, &balance)
 		})
 	}
 }
 
 func TestSQLStorage_GetOrdersWithTemporaryStatus(t *testing.T) {
-	if !isDevDBAvailable {
+	ctx := context.Background()
+	db, err := NewSQLStorage(devDSN)
+	if err != nil {
+		log.Println(err)
 		t.Skipf("dev db is not available. skipping")
 	}
-
-	db, err := NewSQLStorage(devDSN)
-	require.NoError(t, err)
+	defer db.Connection.Close()
 
 	// вставка тестовых данных
-	undoTestChanges(t, db.Connection)
+	clearTables(t, db.Connection)
+	defer clearTables(t, db.Connection)
 
 	var userID1, userID2 int64
-	err = db.Connection.QueryRowContext(context.Background(),
+	err = db.Connection.QueryRowContext(ctx,
 		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userID1)
 	require.NoError(t, err)
-	err = db.Connection.QueryRowContext(context.Background(),
+	err = db.Connection.QueryRowContext(ctx,
 		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "user2", "pw2").Scan(&userID2)
 	require.NoError(t, err)
-
-	// для пакетной вставки данных в дб
-	tx, err := db.Connection.BeginTx(context.Background(), nil)
-	require.NoError(t, err)
-	defer tx.Rollback()
 
 	demo := demoOrderStatuses
 	demo[0].UserID, demo[2].UserID = userID1, userID1
 	demo[1].UserID, demo[3].UserID = userID2, userID2
 	for _, oS := range demo {
-		_, err = tx.ExecContext(context.Background(),
+		_, err = db.Connection.ExecContext(ctx,
 			"INSERT INTO orders(order_id, status, amount, uploaded_at, user_id) VALUES ($1, $2, $3, $4, $5)",
 			oS.Number, oS.Status, oS.Amount, oS.UploadedAt, oS.UserID)
 		require.NoError(t, err)
 	}
-	err = tx.Commit()
-	require.NoError(t, err)
 
-	tests := []struct {
-		name    string
-		wantOS  []OrderStatus
-		wantErr error
-	}{
-		{
-			name:    "Test 1. Correct add order",
-			wantOS:  []OrderStatus{demoOrderStatuses[0]},
-			wantErr: nil,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			oSList, err := db.GetOrdersWithTemporaryStatus(context.Background())
-			assert.Equal(t, tt.wantOS, oSList)
-			assert.ErrorIs(t, err, tt.wantErr)
-		})
-	}
-
-	undoTestChanges(t, db.Connection)
+	// тест
+	oSList, err := db.GetOrdersWithTemporaryStatus(ctx)
+	assert.Equal(t, []OrderStatus{demoOrderStatuses[0]}, oSList)
+	assert.NoError(t, err)
 }
 
 func TestSQLStorage_GetUser(t *testing.T) {
-	if !isDevDBAvailable {
+	ctx := context.Background()
+	db, err := NewSQLStorage(devDSN)
+	if err != nil {
+		log.Println(err)
 		t.Skipf("dev db is not available. skipping")
 	}
-
-	db, err := NewSQLStorage(devDSN)
-	require.NoError(t, err)
+	defer db.Connection.Close()
 
 	// вставка тестовых данных
-	undoTestChanges(t, db.Connection)
+	clearTables(t, db.Connection)
+	defer clearTables(t, db.Connection)
 
 	var userID1 int64
-	err = db.Connection.QueryRowContext(context.Background(),
-		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userID1)
+	err = db.Connection.QueryRowContext(ctx,
+		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id",
+		"demoU", "demoU").Scan(&userID1)
 	require.NoError(t, err)
 
 	type args struct {
@@ -620,110 +622,52 @@ func TestSQLStorage_GetUser(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotUser, err := db.GetUser(context.Background(), tt.login)
+			gotUser, err := db.GetUser(ctx, tt.login)
 			assert.Equal(t, tt.wantUser, gotUser)
 			assert.ErrorIs(t, err, tt.wantErr)
-
 		})
 	}
-
-	undoTestChanges(t, db.Connection)
-}
-
-func TestSQLStorage_UpdateBalance(t *testing.T) {
-	if !isDevDBAvailable {
-		t.Skipf("dev db is not available. skipping")
-	}
-
-	db, err := NewSQLStorage(devDSN)
-	require.NoError(t, err)
-
-	// вставка тестовых данных
-	undoTestChanges(t, db.Connection)
-
-	var userID int64
-	err = db.Connection.QueryRowContext(context.Background(),
-		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userID)
-	require.NoError(t, err)
-
-	_, err = db.Connection.ExecContext(context.Background(),
-		"INSERT INTO balance(balance, withdrawn, user_id) VALUES ($1, $2, $3)",
-		250, 130, userID)
-	require.NoError(t, err)
-
-	tests := []struct {
-		name        string
-		argBalance  Balance
-		wantBalance *Balance
-		wantErr     error
-	}{
-		{
-			name:        "Test 1. Correct update balance",
-			argBalance:  Balance{UserID: userID, WithdrawnAmount: 150, BalanceAmount: 230},
-			wantBalance: &Balance{UserID: userID, WithdrawnAmount: 150, BalanceAmount: 230},
-			wantErr:     nil,
-		},
-		{
-			name:        "Test 2. Incorrect update, user not found",
-			argBalance:  Balance{UserID: 31333, WithdrawnAmount: 300, BalanceAmount: 500},
-			wantBalance: &Balance{UserID: 0, BalanceAmount: 0, WithdrawnAmount: 0},
-			wantErr:     fmt.Errorf("balance has not been changed, unknown error"),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err = db.UpdateBalance(context.Background(), tt.argBalance)
-			assert.Equal(t, err, tt.wantErr)
-
-			// получаем текущие значения баланса из бд
-			balance := &Balance{}
-			err = db.Connection.QueryRowContext(context.Background(),
-				"SELECT balance, withdrawn, user_id FROM balance WHERE user_id = $1",
-				tt.argBalance.UserID).Scan(&balance.BalanceAmount, &balance.WithdrawnAmount, &balance.UserID)
-
-			// проверяем наличие изменений
-			assert.Equal(t, tt.wantBalance, balance)
-		})
-	}
-
-	undoTestChanges(t, db.Connection)
 }
 
 func TestSQLStorage_UpdateOrderStatuses(t *testing.T) {
-	if !isDevDBAvailable {
+	ctx := context.Background()
+	db, err := NewSQLStorage(devDSN)
+	if err != nil {
+		log.Println(err)
 		t.Skipf("dev db is not available. skipping")
 	}
-
-	db, err := NewSQLStorage(devDSN)
-	require.NoError(t, err)
+	defer db.Connection.Close()
 
 	// вставка тестовых данных
-	undoTestChanges(t, db.Connection)
+	clearTables(t, db.Connection)
+	defer clearTables(t, db.Connection)
 
 	var userID1, userID2 int64
-	err = db.Connection.QueryRowContext(context.Background(),
+	err = db.Connection.QueryRowContext(ctx,
 		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "demoU", "demoU").Scan(&userID1)
 	require.NoError(t, err)
-	err = db.Connection.QueryRowContext(context.Background(),
+	err = db.Connection.QueryRowContext(ctx,
 		"INSERT INTO users(login, password) VALUES ($1, $2) RETURNING id", "user2", "pw2").Scan(&userID2)
 	require.NoError(t, err)
 
-	// для пакетной вставки данных в дб
-	tx, err := db.Connection.BeginTx(context.Background(), nil)
+	_, err = db.Connection.ExecContext(ctx,
+		"INSERT INTO balance(balance, withdrawn, user_id) VALUES ($1, $2, $3)",
+		1000, 1000, userID1)
 	require.NoError(t, err)
-	defer tx.Rollback()
+	_, err = db.Connection.ExecContext(ctx,
+		"INSERT INTO balance(balance, withdrawn, user_id) VALUES ($1, $2, $3)",
+		1000, 1000, userID2)
+	require.NoError(t, err)
 
 	demo := demoOrderStatuses
 	demo[0].UserID, demo[2].UserID = userID1, userID1
 	demo[1].UserID, demo[3].UserID = userID2, userID2
 	for _, oS := range demo {
-		_, err = tx.ExecContext(context.Background(),
+		_, err = db.Connection.ExecContext(ctx,
 			"INSERT INTO orders(order_id, status, amount, uploaded_at, user_id) VALUES ($1, $2, $3, $4, $5)",
 			oS.Number, oS.Status, oS.Amount, oS.UploadedAt, oS.UserID)
 		require.NoError(t, err)
 	}
-	err = tx.Commit()
-	require.NoError(t, err)
 
 	updatedOS := []OrderStatus{demo[0]}
 	updatedOS[0].Status = "PROCESSED"
@@ -736,8 +680,8 @@ func TestSQLStorage_UpdateOrderStatuses(t *testing.T) {
 		updatedOS[0],
 	}
 
-	// само тестирование
-	err = db.UpdateOrderStatuses(context.Background(), updatedOS)
+	// запускаю тестируемую функцию
+	err = db.UpdateOrderStatuses(ctx, updatedOS)
 	require.NoError(t, err)
 
 	// беру текущее состояние таблицы orders
@@ -745,6 +689,7 @@ func TestSQLStorage_UpdateOrderStatuses(t *testing.T) {
 	rows, err := db.Connection.QueryContext(context.Background(),
 		`SELECT order_id, status, amount, uploaded_at, user_id FROM orders`)
 	require.NoError(t, err)
+	defer rows.Close()
 	var oS OrderStatus
 	for rows.Next() {
 		oS = OrderStatus{}
@@ -756,7 +701,38 @@ func TestSQLStorage_UpdateOrderStatuses(t *testing.T) {
 	err = rows.Err()
 	require.NoError(t, err)
 
+	// проверяю наличие изменений в таблице заказов
 	assert.Equal(t, wantOS, curOS)
 
-	undoTestChanges(t, db.Connection)
+	// беру текущее состояние таблицы балансов
+	balances := map[int64]Balance{}
+	rows, err = db.Connection.QueryContext(ctx,
+		`SELECT balance, withdrawn, user_id FROM balance`)
+	require.NoError(t, err)
+	defer rows.Close()
+	var b Balance
+	for rows.Next() {
+		b = Balance{}
+		err = rows.Scan(&b.BalanceAmount, &b.WithdrawnAmount, &b.UserID)
+		require.NoError(t, err)
+
+		balances[b.UserID] = b
+	}
+	err = rows.Err()
+	require.NoError(t, err)
+
+	// проверяю изменения балансов
+	expectedBalances := map[int64]Balance{
+		userID1: {
+			UserID:          userID1,
+			BalanceAmount:   1300,
+			WithdrawnAmount: 1000,
+		},
+		userID2: {
+			UserID:          userID2,
+			BalanceAmount:   1000,
+			WithdrawnAmount: 1000,
+		},
+	}
+	assert.Equal(t, expectedBalances, balances)
 }
