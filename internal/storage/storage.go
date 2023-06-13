@@ -75,7 +75,7 @@ func (db *SQLStorage) AddUser(ctx context.Context, login, hashedPassword string)
 		return nil, err
 	}
 
-	return &User{ID: id, Login: login, Password: password}, tx.Commit()
+	return &User{ID: id, Login: login, Password: hashedPassword}, tx.Commit()
 }
 
 func (db *SQLStorage) GetUser(ctx context.Context, login string) (*User, error) {

@@ -162,9 +162,9 @@ func TestServer_handlerGetOrderStatusList(t *testing.T) {
 			wantResponse: testinghelper.Response{
 				StatusCode:  http.StatusOK,
 				ContentType: ContentTypeJSON,
-				Content: `[{"number":"order1","status":"PROCESSED","accrual":100,"uploaded_at":"2022-12-10T12:00:00+04:00"},` +
-					`{"number":"order3","status":"INVALID","uploaded_at":"2023-02-10T12:00:00+04:00"},` +
-					`{"number":"9359943520","status":"NEW","uploaded_at":"2023-03-10T12:00:00+04:00"}]`,
+				Content: `[{"number":"order1","status":"PROCESSED","accrual":100,"uploaded_at":"2022-12-10T12:00:00+03:00"},` +
+					`{"number":"order3","status":"INVALID","uploaded_at":"2023-02-10T12:00:00+03:00"},` +
+					`{"number":"9359943520","status":"NEW","uploaded_at":"2023-03-10T12:00:00+03:00"}]`,
 				Cookies: nil,
 			},
 		},
@@ -321,7 +321,7 @@ func TestServer_handlerGetWithdrawals(t *testing.T) {
 			wantResponse: testinghelper.Response{
 				StatusCode:  http.StatusOK,
 				ContentType: ContentTypeJSON,
-				Content:     `[{"order":"order6","sum":100,"processed_at":"2023-04-02T12:00:00+04:00"}]`,
+				Content:     `[{"order":"order6","sum":100,"processed_at":"2023-04-02T12:00:00+03:00"}]`,
 				Cookies:     nil,
 			},
 		},

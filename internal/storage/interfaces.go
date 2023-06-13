@@ -7,7 +7,6 @@ type Storage interface {
 	GetUser(ctx context.Context, login string) (*User, error)
 
 	GetBalance(ctx context.Context, user User) (*Balance, error)
-	UpdateBalance(ctx context.Context, newBalance Balance) error
 	GetOrderStatusList(ctx context.Context, user User) ([]OrderStatus, error)
 	AddOrder(ctx context.Context, orderNumber string, user User) error
 
