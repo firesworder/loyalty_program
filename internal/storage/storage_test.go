@@ -613,12 +613,12 @@ func TestSQLStorage_GetUser(t *testing.T) {
 			name:     "Test 2. User not exist",
 			args:     args{login: "someUser", password: "someUserPass"},
 			wantUser: nil,
-			wantErr:  ErrAuthDataIncorrect,
+			wantErr:  ErrLoginNotExist,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotUser, err := db.GetUser(context.Background(), tt.login, tt.password)
+			gotUser, err := db.GetUser(context.Background(), tt.login)
 			assert.Equal(t, tt.wantUser, gotUser)
 			assert.ErrorIs(t, err, tt.wantErr)
 

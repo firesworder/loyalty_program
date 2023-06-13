@@ -3,8 +3,8 @@ package storage
 import "context"
 
 type Storage interface {
-	AddUser(ctx context.Context, login, password string) (*User, error)
-	GetUser(ctx context.Context, login, password string) (*User, error)
+	AddUser(ctx context.Context, login, hashedPassword string) (*User, error)
+	GetUser(ctx context.Context, login string) (*User, error)
 
 	GetBalance(ctx context.Context, user User) (*Balance, error)
 	UpdateBalance(ctx context.Context, newBalance Balance) error

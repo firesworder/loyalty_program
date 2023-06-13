@@ -4,8 +4,8 @@ const createTablesSQL = `
 CREATE TABLE IF NOT EXISTS Users
 (
 	id      SERIAL PRIMARY KEY,
-	login 	VARCHAR(50) UNIQUE,
-    password VARCHAR(50)
+	login 	VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS Orders

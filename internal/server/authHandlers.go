@@ -1,11 +1,16 @@
 package server
 
 import (
-	"crypto/md5"
+	"crypto/hmac"
+	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/firesworder/loyalty_program/internal/storage"
+	"golang.org/x/crypto/bcrypt"
+	"log"
 	"net/http"
 	"net/url"
 	"time"
@@ -18,7 +23,33 @@ type postArgsUser struct {
 
 const TokenCookieName = "token"
 const TokenExpires = 7 * 24 * time.Hour // неделя
-const HashSalt = "b509c8147abf2cf02d9f12707afdf4ae"
+const bcryptCost = 8
+
+// generateRandom - создает массив байт заданной длины
+func generateRandom(size int) ([]byte, error) {
+	randBytes := make([]byte, size)
+	_, err := rand.Read(randBytes)
+	if err != nil {
+		return nil, err
+	}
+	return randBytes, nil
+}
+
+// generateToken - создает токен авторизации, с использованием hmac
+func generateToken(key []byte) ([]byte, error) {
+	if key == nil {
+		return nil, fmt.Errorf("token gen key is not set")
+	}
+
+	newToken, err := generateRandom(32)
+	if err != nil {
+		return nil, err
+	}
+
+	h := hmac.New(sha256.New, key)
+	h.Write(newToken)
+	return h.Sum(nil), err
+}
 
 func checkReqAuthData(writer http.ResponseWriter, request *http.Request) *postArgsUser {
 	var u postArgsUser
@@ -34,12 +65,6 @@ func checkReqAuthData(writer http.ResponseWriter, request *http.Request) *postAr
 	return &u
 }
 
-func createToken(u *postArgsUser) string {
-	token := u.Login + u.Password + time.Now().String() + HashSalt
-	hashToken := md5.Sum([]byte(token))
-	return hex.EncodeToString(hashToken[:])
-}
-
 func setTokenCookie(writer http.ResponseWriter, token string) {
 	expires := time.Now().Add(TokenExpires)
 	cookie := http.Cookie{Name: TokenCookieName, Value: url.QueryEscape(token), Expires: expires}
@@ -48,16 +73,21 @@ func setTokenCookie(writer http.ResponseWriter, token string) {
 
 // handlerRegisterUser хандлер регистрации пользователей
 func (s *Server) handlerRegisterUser(writer http.ResponseWriter, request *http.Request) {
+	// todo: перенести в констрейнты бд?
 	userPost := checkReqAuthData(writer, request)
 	if userPost == nil {
 		return
 	}
 
 	// хеш пароля
-	hash := md5.Sum([]byte(userPost.Password))
-	hashedPassword := hex.EncodeToString(hash[:])
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(userPost.Password), bcryptCost)
+	if err != nil {
+		log.Println(err)
+		http.Error(writer, "", http.StatusInternalServerError)
+		return
+	}
 
-	user, err := s.Storage.AddUser(request.Context(), userPost.Login, hashedPassword)
+	user, err := s.Storage.AddUser(request.Context(), userPost.Login, string(hashedPassword))
 	if err != nil {
 		if errors.Is(err, storage.ErrLoginExist) {
 			http.Error(writer, err.Error(), http.StatusConflict)
@@ -68,10 +98,16 @@ func (s *Server) handlerRegisterUser(writer http.ResponseWriter, request *http.R
 		}
 	}
 
-	token := createToken(userPost)
+	token, err := generateToken(s.tokenGenKey)
+	if err != nil {
+		log.Println(err)
+		http.Error(writer, "", http.StatusInternalServerError)
+		return
+	}
+	tokenStr := hex.EncodeToString(token)
 
-	s.TokensCache.AddUser(token, *user)
-	setTokenCookie(writer, token)
+	s.TokensCache.AddUser(tokenStr, *user)
+	setTokenCookie(writer, tokenStr)
 }
 
 // handlerLoginUser хандлер авторизации
@@ -81,18 +117,32 @@ func (s *Server) handlerLoginUser(writer http.ResponseWriter, request *http.Requ
 		return
 	}
 
-	// хеш пароля
-	hash := md5.Sum([]byte(userPost.Password))
-	hashedPassword := hex.EncodeToString(hash[:])
-
-	user, err := s.Storage.GetUser(request.Context(), userPost.Login, hashedPassword)
-	if errors.Is(err, storage.ErrAuthDataIncorrect) {
+	user, err := s.Storage.GetUser(request.Context(), userPost.Login)
+	// todo: исправить вложенность ошибки
+	if errors.Is(err, storage.ErrLoginNotExist) {
 		http.Error(writer, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
-	token := createToken(userPost)
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(userPost.Password))
+	if err != nil {
+		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
+			http.Error(writer, "password incorrect", http.StatusUnauthorized)
+			return
+		}
+		log.Println(err)
+		http.Error(writer, "", http.StatusInternalServerError)
+		return
+	}
 
-	s.TokensCache.AddUser(token, *user)
-	setTokenCookie(writer, token)
+	token, err := generateToken(s.tokenGenKey)
+	if err != nil {
+		log.Println(err)
+		http.Error(writer, "", http.StatusInternalServerError)
+		return
+	}
+	tokenStr := hex.EncodeToString(token)
+
+	s.TokensCache.AddUser(tokenStr, *user)
+	setTokenCookie(writer, tokenStr)
 }

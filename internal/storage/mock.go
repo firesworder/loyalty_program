@@ -2,8 +2,6 @@ package storage
 
 import (
 	"context"
-	"crypto/md5"
-	"encoding/hex"
 	"fmt"
 	"time"
 )
@@ -71,7 +69,7 @@ var MockWithdrawnData = []Withdrawn{
 }
 
 var MockUserData = []User{
-	{ID: 0, Login: "admin", Password: "21232f297a57a5a743894a0e4a801fc3"},
+	{ID: 0, Login: "admin", Password: "$2a$08$YjC7N8TpVtpX5Tx6yjnCiOK8gT31wndg2ADC0GvRzsXh0MdRHVWiG"},
 	{ID: 1, Login: "postgres", Password: "postgres"},
 }
 
@@ -96,32 +94,26 @@ func (m *Mock) ResetData() {
 	m.Balance = MockUserBalanceData
 }
 
-func (m *Mock) AddUser(ctx context.Context, login, password string) (*User, error) {
+func (m *Mock) AddUser(ctx context.Context, login, hashedPassword string) (*User, error) {
 	for _, user := range m.Users {
 		if user.Login == login {
 			return nil, ErrLoginExist
 		}
 	}
 
-	hash := md5.Sum([]byte(password))
-	hashedPassword := hex.EncodeToString(hash[:])
 	newID := int64(len(m.Users))
 	u := User{ID: newID, Login: login, Password: hashedPassword}
 	m.Users = append(m.Users, u)
 	return &u, nil
 }
 
-func (m *Mock) GetUser(ctx context.Context, login, password string) (*User, error) {
+func (m *Mock) GetUser(ctx context.Context, login string) (*User, error) {
 	for _, user := range m.Users {
 		if user.Login == login {
-			if user.Password == password {
-				return &user, nil
-			} else {
-				return nil, ErrAuthDataIncorrect
-			}
+			return &user, nil
 		}
 	}
-	return nil, ErrAuthDataIncorrect
+	return nil, ErrLoginNotExist
 }
 
 func (m *Mock) GetBalance(ctx context.Context, user User) (*Balance, error) {

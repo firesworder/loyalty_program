@@ -7,7 +7,7 @@ import (
 
 var (
 	ErrLoginExist          = errors.New("login already exist")
-	ErrAuthDataIncorrect   = errors.New("login or password incorrect")
+	ErrLoginNotExist       = errors.New("login not exist")
 	ErrOrderRegByThatUser  = errors.New("order already registered by you")
 	ErrOrderRegByOtherUser = errors.New("order has been registered already by other user")
 	ErrBalanceExceeded     = errors.New("balance exceeded")
