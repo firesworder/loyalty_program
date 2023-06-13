@@ -90,12 +90,11 @@ func (s *Server) handlerRegisterUser(writer http.ResponseWriter, request *http.R
 	user, err := s.Storage.AddUser(request.Context(), userPost.Login, string(hashedPassword))
 	if err != nil {
 		if errors.Is(err, storage.ErrLoginExist) {
-			http.Error(writer, err.Error(), http.StatusConflict)
-			return
-		} else {
-			http.Error(writer, err.Error(), http.StatusInternalServerError)
+			http.Error(writer, "login already exist", http.StatusConflict)
 			return
 		}
+		handleInternalError(err, writer)
+		return
 	}
 
 	token, err := generateToken(s.tokenGenKey)
@@ -118,9 +117,12 @@ func (s *Server) handlerLoginUser(writer http.ResponseWriter, request *http.Requ
 	}
 
 	user, err := s.Storage.GetUser(request.Context(), userPost.Login)
-	// todo: исправить вложенность ошибки
-	if errors.Is(err, storage.ErrLoginNotExist) {
-		http.Error(writer, err.Error(), http.StatusUnauthorized)
+	if err != nil {
+		if errors.Is(err, storage.ErrLoginNotExist) {
+			http.Error(writer, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		handleInternalError(err, writer)
 		return
 	}
 

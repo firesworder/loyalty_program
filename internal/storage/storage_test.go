@@ -254,7 +254,8 @@ func TestSQLStorage_GetOrderStatusList(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotOS := db.GetOrderStatusList(context.Background(), tt.user)
+			gotOS, err := db.GetOrderStatusList(context.Background(), tt.user)
+			require.NoError(t, err)
 			assert.Equal(t, tt.wantOS, gotOS)
 		})
 	}
@@ -434,7 +435,8 @@ func TestSQLStorage_GetWithdrawnList(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotWList := db.GetWithdrawnList(context.Background(), tt.user)
+			gotWList, err := db.GetWithdrawnList(context.Background(), tt.user)
+			require.NoError(t, err)
 			assert.Equal(t, tt.wantWList, gotWList)
 		})
 	}

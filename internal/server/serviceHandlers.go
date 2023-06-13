@@ -73,7 +73,7 @@ func (s *Server) handlerRegisterOrderNumber(writer http.ResponseWriter, request 
 	defer request.Body.Close()
 	reqBody, err := io.ReadAll(request.Body)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		handleInternalError(err, writer)
 		return
 	}
 	if len(reqBody) == 0 {
@@ -98,6 +98,8 @@ func (s *Server) handlerRegisterOrderNumber(writer http.ResponseWriter, request 
 			http.Error(writer, err.Error(), http.StatusConflict)
 			return
 		}
+		handleInternalError(err, writer)
+		return
 	}
 	writer.WriteHeader(http.StatusAccepted)
 }
@@ -110,10 +112,15 @@ func (s *Server) handlerGetOrderStatusList(writer http.ResponseWriter, request *
 		return
 	}
 
-	statusList := s.Storage.GetOrderStatusList(request.Context(), *user)
+	statusList, err := s.Storage.GetOrderStatusList(request.Context(), *user)
+	if err != nil {
+		handleInternalError(err, writer)
+		return
+	}
 	rJSON, err := json.Marshal(statusList)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		handleInternalError(err, writer)
+		return
 	}
 
 	writer.Header().Set("Content-Type", ContentTypeJSON)
@@ -129,7 +136,7 @@ func (s *Server) handlerGetBalance(writer http.ResponseWriter, request *http.Req
 
 	balance, err := s.Storage.GetBalance(request.Context(), *user)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		handleInternalError(err, writer)
 		return
 	}
 
@@ -140,7 +147,7 @@ func (s *Server) handlerGetBalance(writer http.ResponseWriter, request *http.Req
 
 	rJSON, err := json.Marshal(r)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		handleInternalError(err, writer)
 		return
 	}
 	writer.Header().Set("Content-Type", ContentTypeJSON)
@@ -160,7 +167,11 @@ func (s *Server) handlerWithdrawBonuses(writer http.ResponseWriter, request *htt
 		Sum   float64 `json:"sum"`
 	}{}
 	err := json.NewDecoder(request.Body).Decode(&r)
-	if err != nil || (r.Order == "" || r.Sum == 0) {
+	if err != nil {
+		handleInternalError(err, writer)
+		return
+	}
+	if r.Order == "" || r.Sum == 0 {
 		http.Error(writer, "order and sum fields should be set and not empty", http.StatusBadRequest)
 		return
 	}
@@ -172,8 +183,12 @@ func (s *Server) handlerWithdrawBonuses(writer http.ResponseWriter, request *htt
 	}
 
 	err = s.Storage.AddWithdrawn(request.Context(), r.Order, r.Sum, *user)
-	if errors.Is(err, storage.ErrBalanceExceeded) {
-		http.Error(writer, err.Error(), http.StatusPaymentRequired)
+	if err != nil {
+		if errors.Is(err, storage.ErrBalanceExceeded) {
+			http.Error(writer, err.Error(), http.StatusPaymentRequired)
+			return
+		}
+		handleInternalError(err, writer)
 		return
 	}
 }
@@ -185,7 +200,11 @@ func (s *Server) handlerGetWithdrawals(writer http.ResponseWriter, request *http
 		return
 	}
 
-	withdrawalsList := s.Storage.GetWithdrawnList(request.Context(), *user)
+	withdrawalsList, err := s.Storage.GetWithdrawnList(request.Context(), *user)
+	if err != nil {
+		handleInternalError(err, writer)
+		return
+	}
 	if len(withdrawalsList) == 0 {
 		writer.WriteHeader(http.StatusNoContent)
 		return
@@ -193,7 +212,7 @@ func (s *Server) handlerGetWithdrawals(writer http.ResponseWriter, request *http
 
 	rJSON, err := json.Marshal(withdrawalsList)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		handleInternalError(err, writer)
 		return
 	}
 
